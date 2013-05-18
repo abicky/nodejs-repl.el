@@ -83,7 +83,15 @@ See also `comint-process-echoes'")
 (defvar nodejs-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 (defvar nodejs-ansi-color-sequence-re "\\(\x1b\\[[0-9]+m\\)")
 ;;; if send string like "a; Ma\t", return a; Math\x1b[1G> a; Math\x1b[0K\x1b[10G
-(defvar nodejs-prompt-re "\x1b\\[1G> .*\x1b\\[0K\x1b\\[[0-9]+G$")
+(defvar nodejs-prompt-re
+  (concat
+   "\x1b\\[1G"
+   "\\("
+   "\x1b\\[0J> .*\x1b\\[[0-9]+G"  ; for Node.js 0.8
+   "\\|"
+   "> .*\x1b\\[0K\x1b\\[[0-9]+G"  ; for Node.js 0.4 or 0.6
+   "\\)"
+   "$"))
 ;;; not support Unicode characters
 (defvar nodejs-require-re
   (concat
@@ -144,12 +152,15 @@ See also `comint-process-echoes'")
   "Wait for Node.js process to output all results."
   (process-put proc 'last-line "")
   (process-put proc 'running-p t)
+  ;; trim trailing white spaces
+  (setq string (replace-regexp-in-string "\\s-*$" "" string))
   ;; TODO: write unit test for the case that the process returns 'foo' when string is 'foo\t'
   (while (or (process-get proc 'running-p)
              (not
               (let ((last-line (process-get proc 'last-line)))
                 (or (string-match-p nodejs-prompt-re last-line)
-                    (string-match-p (concat "^" last-line "\\s-$") string)))))
+                    (string-match-p "^\x1b[[0-9]+D$" last-line)  ; for Node.js 0.8
+                    (string= last-line string)))))
     (process-put proc 'running-p nil)
     (accept-process-output proc interval)))
 
