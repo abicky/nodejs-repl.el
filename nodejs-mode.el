@@ -80,7 +80,7 @@ See also `comint-input-ignoredups'")
 
 See also `comint-process-echoes'")
 
-(defvar nodejs-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GK]\\)")
+(defvar nodejs-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 (defvar nodejs-ansi-color-sequence-re "\\(\x1b\\[[0-9]+m\\)")
 ;;; if send string like "a; Ma\t", return a; Math\x1b[1G> a; Math\x1b[0K\x1b[10G
 (defvar nodejs-prompt-re "\x1b\\[1G> .*\x1b\\[0K\x1b\\[[0-9]+G$")
