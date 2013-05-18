@@ -192,9 +192,8 @@ when receive the output string"
   (process-send-string (get-process "node") "\x03"))
 
 (defun nodejs-clear-line ()
-  "Send ^A^K to Node.js process."
-  (nodejs--send-string "\x01")
-  (nodejs--send-string "\x0b"))
+  "Send ^U to Node.js process."
+  (nodejs--send-string "\x15"))
 
 (defun nodejs-execute (command &optional buf)
   "Execute a command and output the result to the temporary buffer."
