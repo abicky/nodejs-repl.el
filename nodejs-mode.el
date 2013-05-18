@@ -146,7 +146,6 @@ See also `comint-process-echoes'")
   (process-put proc 'running-p t)
   ;; TODO: write unit test for the case that the process returns 'foo' when string is 'foo\t'
   (while (or (process-get proc 'running-p)
-             (string-match-p "^require\\s-*(\\s-*['\"]" (process-get proc 'last-line))
              (not
               (let ((last-line (process-get proc 'last-line)))
                 (or (string-match-p nodejs-prompt-re last-line)
