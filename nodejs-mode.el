@@ -53,6 +53,11 @@
   :group 'nodejs
   :type 'string)
 
+(defcustom nodejs-prompt "> "
+  "Node.js prompt used in `nodejs-mode'."
+  :group 'nodejs
+  :type 'string)
+
 (defvar nodejs-process-name "nodejs"
   "process name of Node.js REPL.")
 
@@ -70,6 +75,17 @@
     (define-key map (kbd "C-c C-c") 'nodejs-quit-or-cancel)
     map))
 
+;; process.stdout.columns should be set.
+;; Node.js 0.8 and 0.10 uses this value as the maximum number of columns,
+;; but process.stdout.columns in Emacs is infinity because Emacs returns 0 as winsize.ws_col.
+;; The completion candidates won't be displayed if process.stdout.columns is infinity.
+;; see also `handleGroup` function in readline.js
+(defvar nodejs-repl-code
+  (concat
+   "process.stdout.columns = %d;"
+   "require('repl').start('%s', null, null, true, false)"))
+
+
 (defvar nodejs-input-ignoredups t
   "If non-nil, don't add input matching the last on the input ring.
 
@@ -80,10 +96,20 @@ See also `comint-input-ignoredups'")
 
 See also `comint-process-echoes'")
 
-(defvar nodejs-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GK]\\)")
+(defvar nodejs-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 (defvar nodejs-ansi-color-sequence-re "\\(\x1b\\[[0-9]+m\\)")
 ;;; if send string like "a; Ma\t", return a; Math\x1b[1G> a; Math\x1b[0K\x1b[10G
-(defvar nodejs-prompt-re "\x1b\\[1G> .*\x1b\\[0K\x1b\\[[0-9]+G$")
+(defvar nodejs-prompt-re-format
+  (concat
+   "\x1b\\[1G"
+   "\\("
+   "\x1b\\[0J%s.*\x1b\\[[0-9]+G"  ; for Node.js 0.8
+   "\\|"
+   "%s.*\x1b\\[0K\x1b\\[[0-9]+G"  ; for Node.js 0.4 or 0.6
+   "\\)"
+   "$"))
+(defvar nodejs-prompt-re
+  (format nodejs-prompt-re-format nodejs-prompt nodejs-prompt))
 ;;; not support Unicode characters
 (defvar nodejs-require-re
   (concat
@@ -144,12 +170,15 @@ See also `comint-process-echoes'")
   "Wait for Node.js process to output all results."
   (process-put proc 'last-line "")
   (process-put proc 'running-p t)
+  ;; trim trailing whitespaces
+  (setq string (replace-regexp-in-string "\\s-*$" "" string))
   ;; TODO: write unit test for the case that the process returns 'foo' when string is 'foo\t'
   (while (or (process-get proc 'running-p)
              (not
               (let ((last-line (process-get proc 'last-line)))
                 (or (string-match-p nodejs-prompt-re last-line)
-                    (string-match-p (concat "^" last-line "\\s-$") string)))))
+                    (string-match-p "^\x1b[[0-9]+D$" last-line)  ; for Node.js 0.8
+                    (string= last-line string)))))
     (process-put proc 'running-p nil)
     (accept-process-output proc interval)))
 
@@ -172,11 +201,17 @@ when receive the output string"
           (progn
             ;; remove extra substrings
             (setq ret (replace-regexp-in-string "\r" "" ret))
+            ;; remove LF
             (setq ret (replace-regexp-in-string "\n\\{2,\\}" "\n" ret))
-
-            (setq candidates (split-string (replace-regexp-in-string "\r" "" ret) "\n"))
+            ;; trim trailing whitespaces
+            (setq ret (replace-regexp-in-string "\\s-*$" "" ret))
+            ;; don't split by whitespaces because the prompt may has whitespaces!!
+            (setq candidates (split-string ret "\n"))
             ;; remove the first element (input) and the last element (prompt)
-            (setq candidates (reverse (cdr (reverse (cdr candidates))))))
+            (setq candidates (reverse (cdr (reverse (cdr candidates)))))
+            ;; split by whitespaces
+            ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
+            (setq candidates (split-string (mapconcat 'identity candidates " ") "\\s-+")))
         (setq ret (replace-regexp-in-string nodejs-extra-espace-sequence-re "" ret))
         (setq candidates (list (nodejs--get-last-token ret)))))
     candidates))
@@ -284,8 +319,10 @@ when receive the output string"
 (defun nodejs ()
   "Run Node.js REPL."
   (interactive)
+  (setq nodejs-prompt-re (format nodejs-prompt-re-format nodejs-prompt nodejs-prompt))
   (switch-to-buffer-other-window
-   (apply 'make-comint nodejs-process-name nodejs-command nil))
+   (apply 'make-comint nodejs-process-name nodejs-command nil
+          `("-e" ,(format nodejs-repl-code (window-width) nodejs-prompt))))
   (nodejs-mode))
 
 (provide 'nodejs-mode)
