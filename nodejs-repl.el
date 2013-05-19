@@ -1,9 +1,9 @@
-;;; nodejs-mode.el --- Run Node.js REPL and communicate the process
+;;; nodejs-repl.el --- Run Node.js REPL
 
-;; Copyright (C) 2012  Takeshi Arabiki
+;; Copyright (C) 2012-2013  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: See `nodejs-version'
+;; Version: See `nodejs-repl-version'
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 
 ;;; Commentary:
 ;;
-;; Run Node.js REPL and communicate the process.
 ;; This program is derived from comint-mode and provides the below features.
 ;;
 ;;  * TAB completion, same as Node.js REPL
@@ -31,9 +30,9 @@
 ;; Put this file in your Emacs lisp path (e.g. ~/.emacs.d/site-lisp)
 ;; and add to the following lines to your .emacs:
 ;;
-;;    (require 'nodejs-mode)
+;;    (require 'nodejs-repl)
 ;;
-;; In order to run Node.js REPL, type M-x nodejs.
+;; In order to run Node.js REPL, type M-x nodejs-repl.
 ;; See also `comint-mode' to check key bindings, typing M-x help f comint-mode.
 ;;
 
@@ -41,38 +40,38 @@
 (require 'comint)
 (require 'ansi-color)
 
-(defgroup nodejs nil
+(defgroup nodejs-repl nil
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-version "0.0.1"
+(defconst nodejs-repl-version "0.0.2"
   "Node.js mode Version.")
 
-(defcustom nodejs-command "node"
-  "Node.js command used in `nodejs-mode'."
-  :group 'nodejs
+(defcustom nodejs-repl-command "node"
+  "Node.js command used in `nodejs-repl-mode'."
+  :group 'nodejs-repl
   :type 'string)
 
-(defcustom nodejs-prompt "> "
-  "Node.js prompt used in `nodejs-mode'."
-  :group 'nodejs
+(defcustom nodejs-repl-prompt "> "
+  "Node.js prompt used in `nodejs-repl-mode'."
+  :group 'nodejs-repl
   :type 'string)
 
-(defvar nodejs-process-name "nodejs"
+(defvar nodejs-repl-process-name "nodejs"
   "process name of Node.js REPL.")
 
-(defvar nodejs-temp-buffer-name "*nodejs-command-output*")
+(defvar nodejs-repl-temp-buffer-name "*nodejs-repl-command-output*")
 
-(defvar nodejs-mode-syntax-table
+(defvar nodejs-repl-mode-syntax-table
   (let ((st (make-syntax-table)))
     (c-populate-syntax-table st)
     (modify-syntax-entry ?$ "_" st)
     st))
 
-(defvar nodejs-mode-map
+(defvar nodejs-repl-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "TAB") 'comint-dynamic-complete)
-    (define-key map (kbd "C-c C-c") 'nodejs-quit-or-cancel)
+    (define-key map (kbd "C-c C-c") 'nodejs-repl-quit-or-cancel)
     map))
 
 ;; process.stdout.columns should be set.
@@ -86,20 +85,20 @@
    "require('repl').start('%s', null, null, true, false)"))
 
 
-(defvar nodejs-input-ignoredups t
+(defvar nodejs-repl-input-ignoredups t
   "If non-nil, don't add input matching the last on the input ring.
 
 See also `comint-input-ignoredups'")
 
-(defvar nodejs-process-echoes t
+(defvar nodejs-repl-process-echoes t
   "If non-nil, Node.js does not echo any input.
 
 See also `comint-process-echoes'")
 
-(defvar nodejs-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
-(defvar nodejs-ansi-color-sequence-re "\\(\x1b\\[[0-9]+m\\)")
+(defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
+(defvar nodejs-repl-ansi-color-sequence-re "\\(\x1b\\[[0-9]+m\\)")
 ;;; if send string like "a; Ma\t", return a; Math\x1b[1G> a; Math\x1b[0K\x1b[10G
-(defvar nodejs-prompt-re-format
+(defvar nodejs-repl-prompt-re-format
   (concat
    "\x1b\\[1G"
    "\\("
@@ -108,10 +107,10 @@ See also `comint-process-echoes'")
    "%s.*\x1b\\[0K\x1b\\[[0-9]+G"  ; for Node.js 0.4 or 0.6
    "\\)"
    "$"))
-(defvar nodejs-prompt-re
-  (format nodejs-prompt-re-format nodejs-prompt nodejs-prompt))
+(defvar nodejs-repl-prompt-re
+  (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
 ;;; not support Unicode characters
-(defvar nodejs-require-re
+(defvar nodejs-repl-require-re
   (concat
    "\\(?:^\\|\\s-\\|[-+*/%&|><!;{}()[]\\|\\]\\)"  ; delimiter
    "require\\s-*(\\s-*"
@@ -122,22 +121,22 @@ See also `comint-process-echoes'")
    "\\)"
    "$"))
 
-(defvar nodejs-cache-token "")
-(defvar nodejs-cache-candidates ())
+(defvar nodejs-repl-cache-token "")
+(defvar nodejs-repl-cache-candidates ())
 
 
 ;;;--------------------------
 ;;; Private functions
 ;;;--------------------------
-(defun nodejs--in-string-p (&optional pos)
+(defun nodejs-repl--in-string-p (&optional pos)
   "Return non-nil if point is inside string"
   (nth 3 (syntax-ppss pos)))
 
-(defun nodejs--extract-require-argument (string)
-  (if (string-match nodejs-require-re string)
+(defun nodejs-repl--extract-require-argument (string)
+  (if (string-match nodejs-repl-require-re string)
       (match-string 1 string)))
 
-(defun nodejs--get-last-token (string)
+(defun nodejs-repl--get-last-token (string)
   "Return the last token in the string."
   (if (string-match "\\([._$]\\|\\w\\)+$" string)
       (match-string 0 string)))
@@ -147,26 +146,26 @@ See also `comint-process-echoes'")
 ;;; * the case that incomplete commands are sent like "1 +\n"
 ;;; * support commands which output a string without CR-LF like process.stdout.write("a")
 ;;;   while being processed
-(defun nodejs--send-string (string)
+(defun nodejs-repl--send-string (string)
   "Send string to Node.js process and return the output."
   (with-temp-buffer
-    (let* ((proc (get-process nodejs-process-name))
+    (let* ((proc (get-process nodejs-repl-process-name))
            (orig-marker (marker-position (process-mark proc)))
            (orig-filter (process-filter proc))
            (orig-buf (process-buffer proc)))
       (unwind-protect
           (progn
             (set-process-buffer proc (current-buffer))
-            (set-process-filter proc 'nodejs--insert-and-update-status)
+            (set-process-filter proc 'nodejs-repl--insert-and-update-status)
             (set-marker (process-mark proc) (point-min))
             (process-send-string proc string)
-            (nodejs--wait-for-process proc string 0.01))
+            (nodejs-repl--wait-for-process proc string 0.01))
         (set-process-buffer proc orig-buf)
         (set-process-filter proc orig-filter)
         (set-marker (process-mark proc) orig-marker orig-buf))
       (buffer-string))))
 
-(defun nodejs--wait-for-process (proc string interval)
+(defun nodejs-repl--wait-for-process (proc string interval)
   "Wait for Node.js process to output all results."
   (process-put proc 'last-line "")
   (process-put proc 'running-p t)
@@ -176,13 +175,13 @@ See also `comint-process-echoes'")
   (while (or (process-get proc 'running-p)
              (not
               (let ((last-line (process-get proc 'last-line)))
-                (or (string-match-p nodejs-prompt-re last-line)
+                (or (string-match-p nodejs-repl-prompt-re last-line)
                     (string-match-p "^\x1b[[0-9]+D$" last-line)  ; for Node.js 0.8
                     (string= last-line string)))))
     (process-put proc 'running-p nil)
     (accept-process-output proc interval)))
 
-(defun nodejs--insert-and-update-status (proc string)
+(defun nodejs-repl--insert-and-update-status (proc string)
   "Insert the output string and update the process status (properties)
 when receive the output string"
   (process-put proc 'running-p t)
@@ -191,11 +190,11 @@ when receive the output string"
     (goto-char (point-max))
     (process-put proc 'last-line (buffer-substring (point-at-bol) (point)))))
 
-(defun nodejs--get-candidates-from-process (token)
+(defun nodejs-repl--get-candidates-from-process (token)
   "Get copmletion candidates sending TAB to Node.js process."
-  (let ((ret (nodejs--send-string (concat token "\t")))
+  (let ((ret (nodejs-repl--send-string (concat token "\t")))
          candidates)
-    (nodejs-clear-line)
+    (nodejs-repl-clear-line)
     (when (not (equal ret token))
       (if (string-match-p "\n" ret)
           (progn
@@ -212,29 +211,29 @@ when receive the output string"
             ;; split by whitespaces
             ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
             (setq candidates (split-string (mapconcat 'identity candidates " ") "\\s-+")))
-        (setq ret (replace-regexp-in-string nodejs-extra-espace-sequence-re "" ret))
-        (setq candidates (list (nodejs--get-last-token ret)))))
+        (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
+        (setq candidates (list (nodejs-repl--get-last-token ret)))))
     candidates))
 
 
 ;;;--------------------------
 ;;; Public functions
 ;;;--------------------------
-(defun nodejs-quit-or-cancel ()
+(defun nodejs-repl-quit-or-cancel ()
   "Send ^C to Node.js process."
   (interactive)
   (process-send-string (get-process "node") "\x03"))
 
-(defun nodejs-clear-line ()
+(defun nodejs-repl-clear-line ()
   "Send ^U to Node.js process."
-  (nodejs--send-string "\x15"))
+  (nodejs-repl--send-string "\x15"))
 
-(defun nodejs-execute (command &optional buf)
+(defun nodejs-repl-execute (command &optional buf)
   "Execute a command and output the result to the temporary buffer."
-  (let ((ret (nodejs--send-string (concat command "\n"))))
-    (with-current-buffer (get-buffer-create nodejs-temp-buffer-name)
+  (let ((ret (nodejs-repl--send-string (concat command "\n"))))
+    (with-current-buffer (get-buffer-create nodejs-repl-temp-buffer-name)
       (erase-buffer)
-      (setq ret (replace-regexp-in-string nodejs-ansi-color-sequence-re "" ret))
+      (setq ret (replace-regexp-in-string nodejs-repl-ansi-color-sequence-re "" ret))
       ;; delete inputs
       (setq ret (replace-regexp-in-string "\\(\\w\\|\\W\\)+\r\r\n" "" ret))
       (setq ret (replace-regexp-in-string "\r" "" ret))
@@ -243,7 +242,7 @@ when receive the output string"
       (goto-char (point-max))
       (delete-region (point-at-bol) (point)))))
 
-(defun nodejs-complete-from-process ()
+(defun nodejs-repl-complete-from-process ()
   "Dynamically complete tokens at the point."
   (when (comint-after-pmark-p)
     (let* ((input (buffer-substring (comint-line-beginning-position) (point)))
@@ -251,17 +250,17 @@ when receive the output string"
            token
            candidates
            ret)
-      (if (nodejs--in-string-p)
+      (if (nodejs-repl--in-string-p)
           (progn
-            (setq require-arg (nodejs--extract-require-argument input))
+            (setq require-arg (nodejs-repl--extract-require-argument input))
             (if (and require-arg
                      (or (= (length require-arg) 1)
                          (not (string-match-p "[./]" (substring require-arg 1 2)))))
                 (setq token (concat "require(" require-arg))
               (setq ret (comint-dynamic-complete-as-filename))))
-        (setq token (nodejs--get-last-token input)))
+        (setq token (nodejs-repl--get-last-token input)))
       (when token
-        (setq candidates (nodejs-get-candidates token))
+        (setq candidates (nodejs-repl-get-candidates token))
         ;; TODO: write unit test
         (setq token (replace-regexp-in-string "^require(['\"]" "" token))
         (setq ret (comint-dynamic-simple-complete token candidates)))
@@ -269,22 +268,22 @@ when receive the output string"
           (delete-char -1))
       ret)))
 
-(defun nodejs-get-candidates (token)
+(defun nodejs-repl-get-candidates (token)
   "Get copmletion candidates."
   (let (candidates)
-    (if (and (not (equal nodejs-cache-token ""))
-             (string-match-p (concat "^" nodejs-cache-token) token)
-             (not (string-match-p (concat "^" nodejs-cache-token ".*?[.(/'\"]") token)))
-        (setq candidates nodejs-cache-candidates)
+    (if (and (not (equal nodejs-repl-cache-token ""))
+             (string-match-p (concat "^" nodejs-repl-cache-token) token)
+             (not (string-match-p (concat "^" nodejs-repl-cache-token ".*?[.(/'\"]") token)))
+        (setq candidates nodejs-repl-cache-candidates)
       (if (equal token "require(")  ; a bug occurs when press TAB after "require(" in node 0.6
           (setq candidates nil)
-        (setq candidates (nodejs--get-candidates-from-process token)))
-      (setq nodejs-cache-token token)
-      (setq nodejs-cache-candidates candidates))
+        (setq candidates (nodejs-repl--get-candidates-from-process token)))
+      (setq nodejs-repl-cache-token token)
+      (setq nodejs-repl-cache-candidates candidates))
     candidates))
 
 ;;; a function belong to comint-output-filter-functions must have one argument
-(defun nodejs-filter-escape-sequnces (string)
+(defun nodejs-repl-filter-escape-sequnces (string)
   "Filter extra escape sequences from output."
   (let ((beg (or comint-last-output-start
                  (point-min-marker)))
@@ -292,37 +291,38 @@ when receive the output string"
     (save-excursion
       (goto-char beg)
       ;; remove ansi escape sequences used in readline.js
-      (while (re-search-forward nodejs-extra-espace-sequence-re end t)
+      (while (re-search-forward nodejs-repl-extra-espace-sequence-re end t)
         (replace-match "")))))
 
 ;;; a function belong to comint-output-filter-functions must have one argument
-(defun nodejs-clear-cache (string)
+(defun nodejs-repl-clear-cache (string)
   "Clear caches when outputting the result."
-  (setq nodejs-cache-token "")
-  (setq nodejs-cache-candidates ()))
+  (setq nodejs-repl-cache-token "")
+  (setq nodejs-repl-cache-candidates ()))
 
 
-(define-derived-mode nodejs-mode comint-mode "Node.js REPL"
+(define-derived-mode nodejs-repl-mode comint-mode "Node.js REPL"
   "Major mode for Node.js REPL"
-  :syntax-table nodejs-mode-syntax-table
+  :syntax-table nodejs-repl-mode-syntax-table
   (set (make-local-variable 'font-lock-defaults) '(nil nil t))
-  (add-hook 'comint-output-filter-functions 'nodejs-filter-escape-sequnces nil t)
-  (add-hook 'comint-output-filter-functions 'nodejs-clear-cache nil t)
-  (setq comint-input-ignoredups nodejs-input-ignoredups)
-  (setq comint-process-echoes nodejs-process-echoes)
+  (add-hook 'comint-output-filter-functions 'nodejs-repl-filter-escape-sequnces nil t)
+  (add-hook 'comint-output-filter-functions 'nodejs-repl-clear-cache nil t)
+  (setq comint-input-ignoredups nodejs-repl-input-ignoredups)
+  (setq comint-process-echoes nodejs-repl-process-echoes)
   ;; delq seems to change global variables if called this phase
   (set (make-local-variable 'comint-dynamic-complete-functions)
        (delete 'comint-dynamic-complete-filename comint-dynamic-complete-functions))
-  (add-hook 'comint-dynamic-complete-functions 'nodejs-complete-from-process nil t)
+  (add-hook 'comint-dynamic-complete-functions 'nodejs-repl-complete-from-process nil t)
   (ansi-color-for-comint-mode-on))
 
-(defun nodejs ()
+(defun nodejs-repl ()
   "Run Node.js REPL."
   (interactive)
-  (setq nodejs-prompt-re (format nodejs-prompt-re-format nodejs-prompt nodejs-prompt))
+  (setq nodejs-repl-prompt-re
+        (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
   (switch-to-buffer-other-window
-   (apply 'make-comint nodejs-process-name nodejs-command nil
-          `("-e" ,(format nodejs-repl-code (window-width) nodejs-prompt))))
-  (nodejs-mode))
+   (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
+          `("-e" ,(format nodejs-repl-code (window-width) nodejs-repl-prompt))))
+  (nodejs-repl-mode))
 
-(provide 'nodejs-mode)
+(provide 'nodejs-repl)
