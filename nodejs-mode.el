@@ -211,7 +211,7 @@ when receive the output string"
             (setq candidates (reverse (cdr (reverse (cdr candidates)))))
             ;; split by whitespaces
             ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
-            (setq candidates (mapcan (lambda (x) (split-string x "\\s-+")) candidates)))
+            (setq candidates (split-string (mapconcat 'identity candidates " ") "\\s-+")))
         (setq ret (replace-regexp-in-string nodejs-extra-espace-sequence-re "" ret))
         (setq candidates (list (nodejs--get-last-token ret)))))
     candidates))
