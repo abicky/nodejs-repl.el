@@ -1,6 +1,6 @@
 ;;; nodejs-mode.el --- Run Node.js REPL and communicate the process
 
-;; Copyright (C) 2012  Takeshi Arabiki
+;; Copyright (C) 2012-2013  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
 ;; Version: See `nodejs-version'
@@ -45,7 +45,7 @@
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-version "0.0.1"
+(defconst nodejs-version "0.0.2"
   "Node.js mode Version.")
 
 (defcustom nodejs-command "node"
