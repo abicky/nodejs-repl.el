@@ -1,4 +1,4 @@
-;;; nodejs-repl.el --- Run Node.js REPL and communicate the process
+;;; nodejs-repl.el --- Run Node.js REPL
 
 ;; Copyright (C) 2012-2013  Takeshi Arabiki
 
@@ -20,7 +20,6 @@
 
 ;;; Commentary:
 ;;
-;; Run Node.js REPL and communicate the process.
 ;; This program is derived from comint-mode and provides the below features.
 ;;
 ;;  * TAB completion, same as Node.js REPL
