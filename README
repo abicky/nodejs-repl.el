@@ -1,9 +1,9 @@
-nodejs-mode.el --- Run Node.js REPL and communicate the process
+nodejs-repl.el --- Run Node.js REPL and communicate the process
 
 Copyright (C) 2012  Takeshi Arabiki
 
 Author: Takeshi Arabiki <takeshi.arabiki@gmail.com>
-Version: See `nodejs-version'
+Version: See `nodejs-repl-version'
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ Commentary:
   Put this file in your Emacs lisp path (e.g. ~/.emacs.d/site-lisp)
   and add to the following lines to your .emacs:
 
-     (require 'nodejs-mode)
+     (require 'nodejs-repl)
 
-  In order to run Node.js REPL, type M-x nodejs.
+  In order to run Node.js REPL, type M-x nodejs-repl.
   See also `comint-mode' to check key bindings, typing M-x help f comint-mode.
