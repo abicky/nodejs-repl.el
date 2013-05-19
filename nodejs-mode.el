@@ -70,6 +70,21 @@
     (define-key map (kbd "C-c C-c") 'nodejs-quit-or-cancel)
     map))
 
+;; process.stdout.columns should be set.
+;; Node.js 0.8 and 0.10 uses this value as the maximum number of columns,
+;; but process.stdout.columns in Emacs is infinity because Emacs returns 0 as winsize.ws_col.
+;; The completion candidates won't be displayed if process.stdout.columns is infinity.
+;; see also `handleGroup` function in readline.js
+(defvar nodejs-repl-code
+  (concat
+   "process.stdout.columns = %d;"
+   "var opts = {"
+   "  useGlobal: true,"
+   "  ignoreUndefined: false"
+   "};"
+   "require('repl').start(opts)"))
+
+
 (defvar nodejs-input-ignoredups t
   "If non-nil, don't add input matching the last on the input ring.
 
@@ -185,7 +200,7 @@ when receive the output string"
             (setq ret (replace-regexp-in-string "\r" "" ret))
             (setq ret (replace-regexp-in-string "\n\\{2,\\}" "\n" ret))
 
-            (setq candidates (split-string (replace-regexp-in-string "\r" "" ret) "\n"))
+            (setq candidates (split-string (replace-regexp-in-string "\\s-*$" "" ret) "\n"))
             ;; remove the first element (input) and the last element (prompt)
             (setq candidates (reverse (cdr (reverse (cdr candidates))))))
         (setq ret (replace-regexp-in-string nodejs-extra-espace-sequence-re "" ret))
@@ -296,7 +311,8 @@ when receive the output string"
   "Run Node.js REPL."
   (interactive)
   (switch-to-buffer-other-window
-   (apply 'make-comint nodejs-process-name nodejs-command nil))
+   (apply 'make-comint nodejs-process-name nodejs-command nil
+          `("-e" ,(format nodejs-repl-code (window-width)))))
   (nodejs-mode))
 
 (provide 'nodejs-mode)
