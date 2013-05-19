@@ -170,7 +170,7 @@ See also `comint-process-echoes'")
   "Wait for Node.js process to output all results."
   (process-put proc 'last-line "")
   (process-put proc 'running-p t)
-  ;; trim trailing white spaces
+  ;; trim trailing whitespaces
   (setq string (replace-regexp-in-string "\\s-*$" "" string))
   ;; TODO: write unit test for the case that the process returns 'foo' when string is 'foo\t'
   (while (or (process-get proc 'running-p)
@@ -201,11 +201,17 @@ when receive the output string"
           (progn
             ;; remove extra substrings
             (setq ret (replace-regexp-in-string "\r" "" ret))
+            ;; remove LF
             (setq ret (replace-regexp-in-string "\n\\{2,\\}" "\n" ret))
-
-            (setq candidates (split-string (replace-regexp-in-string "\\s-*$" "" ret) "\n"))
+            ;; trim trailing whitespaces
+            (setq ret (replace-regexp-in-string "\\s-*$" "" ret))
+            ;; don't split by whitespaces because the prompt may has whitespaces!!
+            (setq candidates (split-string ret "\n"))
             ;; remove the first element (input) and the last element (prompt)
-            (setq candidates (reverse (cdr (reverse (cdr candidates))))))
+            (setq candidates (reverse (cdr (reverse (cdr candidates)))))
+            ;; split by whitespaces
+            ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
+            (setq candidates (mapcan (lambda (x) (split-string x "\\s-+")) candidates)))
         (setq ret (replace-regexp-in-string nodejs-extra-espace-sequence-re "" ret))
         (setq candidates (list (nodejs--get-last-token ret)))))
     candidates))

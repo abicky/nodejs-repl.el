@@ -4,6 +4,8 @@
   (desc "run Node.js REPL")
   (expect nil
     (require 'nodejs-mode)
+    ;; TODO: set adjust window width (candidates will change according to the width)
+    ;;(adjust-window-trailing-edge (selected-window) (- 100 (window-width)) t)
     (nodejs))
 
   (desc "nodejs--get-last-token")
@@ -45,20 +47,17 @@
       (string-match-p "a\n\nb\n\\(undefined\\)?" (buffer-string))))
 
   (desc "nodejs-get-candidates")
-  (expect t
-    (let ((ret (nodejs-get-candidates "Ma")))
-      (or (equal ret '("Math"))         ; node 0.4.12
-          (equal ret '("Math" "Math"))  ; node 0.6.17
-          )))
-  (expect t
-    (let ((ret (nodejs-get-candidates "Mat")))
-      (or (equal ret '("Math"))         ; node 0.4.12
-          (equal ret '("Math" "Math"))  ; node 0.6.17
-          )))
+  (expect '("Math")
+    (delete-dups (nodejs-get-candidates "Ma")))
+  (expect '("Math")
+    (delete-dups (nodejs-get-candidates "Mat")))
   (expect "Ma"  ; use cache?
     nodejs-cache-token)
   (expect '("Math.max" "Math.min")
     (nodejs-get-candidates "Math.m"))
+  ;; FIXME: this test is meaningless if window width is not set
+  (expect '("encodeURI" "encodeURIComponent")
+    (delete-dups (nodejs-get-candidates "encode")))
 
   (desc "nodejs-get-candidates for require")
   (expect nil
