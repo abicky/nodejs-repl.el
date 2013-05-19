@@ -53,6 +53,11 @@
   :group 'nodejs
   :type 'string)
 
+(defcustom nodejs-prompt "> "
+  "Node.js prompt used in `nodejs-mode'."
+  :group 'nodejs
+  :type 'string)
+
 (defvar nodejs-process-name "nodejs"
   "process name of Node.js REPL.")
 
@@ -78,11 +83,7 @@
 (defvar nodejs-repl-code
   (concat
    "process.stdout.columns = %d;"
-   "var opts = {"
-   "  useGlobal: true,"
-   "  ignoreUndefined: false"
-   "};"
-   "require('repl').start(opts)"))
+   "require('repl').start('%s', null, null, true, false)"))
 
 
 (defvar nodejs-input-ignoredups t
@@ -98,15 +99,17 @@ See also `comint-process-echoes'")
 (defvar nodejs-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 (defvar nodejs-ansi-color-sequence-re "\\(\x1b\\[[0-9]+m\\)")
 ;;; if send string like "a; Ma\t", return a; Math\x1b[1G> a; Math\x1b[0K\x1b[10G
-(defvar nodejs-prompt-re
+(defvar nodejs-prompt-re-format
   (concat
    "\x1b\\[1G"
    "\\("
-   "\x1b\\[0J> .*\x1b\\[[0-9]+G"  ; for Node.js 0.8
+   "\x1b\\[0J%s.*\x1b\\[[0-9]+G"  ; for Node.js 0.8
    "\\|"
-   "> .*\x1b\\[0K\x1b\\[[0-9]+G"  ; for Node.js 0.4 or 0.6
+   "%s.*\x1b\\[0K\x1b\\[[0-9]+G"  ; for Node.js 0.4 or 0.6
    "\\)"
    "$"))
+(defvar nodejs-prompt-re
+  (format nodejs-prompt-re-format nodejs-prompt nodejs-prompt))
 ;;; not support Unicode characters
 (defvar nodejs-require-re
   (concat
@@ -310,9 +313,10 @@ when receive the output string"
 (defun nodejs ()
   "Run Node.js REPL."
   (interactive)
+  (setq nodejs-prompt-re (format nodejs-prompt-re-format nodejs-prompt nodejs-prompt))
   (switch-to-buffer-other-window
    (apply 'make-comint nodejs-process-name nodejs-command nil
-          `("-e" ,(format nodejs-repl-code (window-width)))))
+          `("-e" ,(format nodejs-repl-code (window-width) nodejs-prompt))))
   (nodejs-mode))
 
 (provide 'nodejs-mode)

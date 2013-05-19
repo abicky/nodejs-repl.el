@@ -83,4 +83,11 @@
      (nodejs--extract-require-argument "$require(\"a")
      (nodejs--extract-require-argument ".require(\"a")
      (nodejs--extract-require-argument "require(\"a\"")))
+
+  ;; TODO: send stirng and check the result (but process won't respond)
+  (desc "nodejs-prompt")
+  (expect nil
+    (setq nodejs-prompt "node> ")
+    (kill-process nodejs-process-name)
+    (nodejs))
   )
