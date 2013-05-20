@@ -20,20 +20,20 @@
 
 ;;; Commentary:
 ;;
-;; This program is derived from comint-mode and provides the below features.
+;; This program is derived from comint-mode and provides the following features.
 ;;
-;;  * TAB completion, same as Node.js REPL
+;;  * TAB completion same as Node.js REPL
 ;;  * file name completion in string
 ;;  * incremental history search
 ;;
 ;;
 ;; Put this file in your Emacs lisp path (e.g. ~/.emacs.d/site-lisp)
-;; and add to the following lines to your .emacs:
+;; and add the following line to your .emacs:
 ;;
 ;;    (require 'nodejs-repl)
 ;;
-;; In order to run Node.js REPL, type M-x nodejs-repl.
-;; See also `comint-mode' to check key bindings, typing M-x help f comint-mode.
+;; Type M-x nodejs-repl to run Node.js REPL.
+;; See also `comint-mode' to check key bindings.
 ;;
 
 (require 'cc-mode)
