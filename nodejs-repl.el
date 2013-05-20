@@ -269,7 +269,7 @@ when receive the output string"
       ret)))
 
 (defun nodejs-repl-get-candidates (token)
-  "Get copmletion candidates."
+  "Get completion candidates."
   (let (candidates)
     (if (and (not (equal nodejs-repl-cache-token ""))
              (string-match-p (concat "^" nodejs-repl-cache-token) token)
@@ -315,6 +315,7 @@ when receive the output string"
   (add-hook 'comint-dynamic-complete-functions 'nodejs-repl-complete-from-process nil t)
   (ansi-color-for-comint-mode-on))
 
+;;;###autoload
 (defun nodejs-repl ()
   "Run Node.js REPL."
   (interactive)
@@ -326,3 +327,4 @@ when receive the output string"
   (nodejs-repl-mode))
 
 (provide 'nodejs-repl)
+;;; nodejs-repl.el ends here
