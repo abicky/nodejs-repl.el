@@ -1,4 +1,4 @@
-(require 'el-expectations)
+(require 'ert-expectations)
 
 (expectations
   (desc "run Node.js REPL")
@@ -90,3 +90,4 @@
     (kill-process nodejs-repl-process-name)
     (nodejs-repl))
   )
+
