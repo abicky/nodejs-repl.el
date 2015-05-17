@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2013  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: See `nodejs-repl-version'
+;; Version: 0.0.2
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -203,12 +203,18 @@ when receive the output string"
     (when (not (equal ret token))
       (if (string-match-p "\n" ret)
           (progn
+            (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
             ;; remove extra substrings
             (setq ret (replace-regexp-in-string "\r" "" ret))
             ;; remove LF
             (setq ret (replace-regexp-in-string "\n\\{2,\\}" "\n" ret))
             ;; trim trailing whitespaces
+            (message "==============")
+            (message ret)
+            (message "==============")
             (setq ret (replace-regexp-in-string "\\s-*$" "" ret))
+            (message ret)
+            (message "==============")
             ;; don't split by whitespaces because the prompt may has whitespaces!!
             (setq candidates (split-string ret "\n"))
             ;; remove the first element (input) and the last element (prompt)

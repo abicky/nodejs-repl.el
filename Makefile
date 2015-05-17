@@ -11,7 +11,7 @@ clean:
 	@rm -f $(TARGET).elc $(TARGET).el~
 
 test:
-	@sh test/test.sh test/test.el
+	cask exec /usr/bin/env emacs -Q --batch -L . -l test/test.el -f ert-run-tests-batch-and-exit
 
 .el.elc:
 	emacs $(OPT) -batch -f batch-byte-compile $<
