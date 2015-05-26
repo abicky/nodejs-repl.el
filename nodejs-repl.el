@@ -196,7 +196,7 @@ when receive the output string"
     (process-put proc 'last-line (buffer-substring (point-at-bol) (point)))))
 
 (defun nodejs-repl--get-candidates-from-process (token)
-  "Get copmletion candidates sending TAB to Node.js process."
+  "Get completion candidates sending TAB to Node.js process."
   (let ((ret (nodejs-repl--send-string (concat token "\t")))
          candidates)
     (nodejs-repl-clear-line)
