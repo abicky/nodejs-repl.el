@@ -62,6 +62,24 @@
   :group 'nodejs-repl
   :type 'string)
 
+
+(defcustom nodejs-repl-input-ignoredups t
+  "If non-nil, don't add input matching the last on the input ring.
+
+See also `comint-input-ignoredups'"
+  :group 'nodejs-repl
+  :type 'boolean)
+
+(defcustom nodejs-repl-process-echoes t
+  "If non-nil, Node.js does not echo any input.
+
+See also `comint-process-echoes'"
+  :group 'nodejs-repl
+  :type 'boolean)
+
+(defvar nodejs-repl-mode-hook nil
+  "Functions runafter `nodejs-repl' is started.")
+
 (defvar nodejs-repl-process-name "nodejs"
   "process name of Node.js REPL.")
 
@@ -90,18 +108,11 @@
    "require('repl').start('%s', null, null, true, false)"))
 
 
-(defvar nodejs-repl-input-ignoredups t
-  "If non-nil, don't add input matching the last on the input ring.
-
-See also `comint-input-ignoredups'")
-
-(defvar nodejs-repl-process-echoes t
-  "If non-nil, Node.js does not echo any input.
-
-See also `comint-process-echoes'")
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
+
 (defvar nodejs-repl-ansi-color-sequence-re "\\(\x1b\\[[0-9]+m\\)")
+
 ;;; if send string like "a; Ma\t", return a; Math\x1b[1G> a; Math\x1b[0K\x1b[10G
 (defvar nodejs-repl-prompt-re-format
   (concat
