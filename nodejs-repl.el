@@ -233,6 +233,39 @@ when receive the output string"
   "Send ^U to Node.js process."
   (nodejs-repl--send-string "\x15"))
 
+(defun nodejs-repl-send-region (start end)
+  "Send the current region to the `nodejs-repl-process'"
+  (interactive "r")
+  (nodejs-repl--send-string (buffer-substring start end)))
+
+(defun nodejs-repl-send-region (start end)
+  "Send the current region to the `nodejs-repl-process'"
+  (interactive "r")
+  (comint-send-region (get-process nodejs-repl-process-name) start end)
+  (comint-send-string (get-process nodejs-repl-process-name) "\n"))
+
+(defun nodejs-repl-load-file ()
+  "Load the file to the `nodejs-repl-process'"
+  (interactive)
+  (nodejs-repl-send-region (point-min) (point-max)))
+
+(defun nodejs-repl-send-last-sexp ()
+  "Send the expression before point to the `nodejs-repl-process'"
+  (interactive)
+  (nodejs-repl-send-region (save-excursion (backward-sexp)
+                             (point))
+                           (point)))
+
+(defun nodejs-repl-switch-to-repl ()
+  "If there is a `nodejs-repl-process' running switch to it,
+otherwise spawn one."
+  (interactive)
+  (let ((nodejs-process (get-process nodejs-repl-process-name)))
+    (if (processp nodejs-process)
+        (switch-to-buffer-other-window
+         (process-buffer nodejs-process))
+      (nodejs-repl))))
+
 (defun nodejs-repl-execute (command &optional buf)
   "Execute a command and output the result to the temporary buffer."
   (let ((ret (nodejs-repl--send-string (concat command "\n"))))
