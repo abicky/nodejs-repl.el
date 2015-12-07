@@ -84,10 +84,12 @@
 ;; but process.stdout.columns in Emacs is infinity because Emacs returns 0 as winsize.ws_col.
 ;; The completion candidates won't be displayed if process.stdout.columns is infinity.
 ;; see also `handleGroup` function in readline.js
-(defvar nodejs-repl-code
+(defvar nodejs-repl-code-format
   (concat
    "process.stdout.columns = %d;"
-   "require('repl').start('%s', null, null, true, false)"))
+   "var repl = require('repl');"
+   "var replMode = repl['REPL_MODE_' + '%s'.toUpperCase()];"
+   "repl.start('%s', null, null, true, false, replMode)"))
 
 
 (defvar nodejs-repl-input-ignoredups t
@@ -326,10 +328,13 @@ when receive the output string"
   (interactive)
   (setq nodejs-repl-prompt-re
         (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
-  (switch-to-buffer-other-window
-   (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
-          `(,@nodejs-repl-arguments "-e" ,(format nodejs-repl-code (window-width) nodejs-repl-prompt))))
-  (nodejs-repl-mode))
+  (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
+         (nodejs-repl-code (format nodejs-repl-code-format
+                                   (window-width) repl-mode nodejs-repl-prompt)))
+    (switch-to-buffer-other-window
+     (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
+            `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
+    (nodejs-repl-mode)))
 
 (provide 'nodejs-repl)
 ;;; nodejs-repl.el ends here
