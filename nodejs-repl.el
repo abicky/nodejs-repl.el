@@ -109,9 +109,9 @@ See also `comint-process-echoes'")
   (concat
    "\x1b\\[1G"
    "\\("
-   "\x1b\\[0J%s.*\x1b\\[[0-9]+G"  ; for Node.js 0.8
+   "\x1b\\[0J%s.*\x1b\\[[0-9]+G.*"  ; for Node.js 0.8
    "\\|"
-   "%s.*\x1b\\[0K\x1b\\[[0-9]+G"  ; for Node.js 0.4 or 0.6
+   "%s.*\x1b\\[0K\x1b\\[[0-9]+G.*"  ; for Node.js 0.4 or 0.6
    "\\)"
    "$"))
 (defvar nodejs-repl-prompt-re
@@ -217,10 +217,13 @@ when receive the output string"
             (setq candidates (reverse (cdr (reverse (cdr candidates)))))
             ;; split by whitespaces
             ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
-        (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
-        (setq candidates (list (nodejs-repl--get-last-token ret)))))
             (setq candidates (split-string (mapconcat 'identity candidates " ") "[ \t\r\n]+"))
 )
+          (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
+          (let ((candidate-token (nodejs-repl--get-last-token ret)))
+            (setq candidates (if (equal candidate-token token)
+                                 nil
+                               (list candidate-token))))))
     candidates))
 
 
