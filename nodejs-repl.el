@@ -109,9 +109,9 @@ See also `comint-process-echoes'")
   (concat
    "\x1b\\[1G"
    "\\("
-   "\x1b\\[0J%s.*\x1b\\[[0-9]+G"  ; for Node.js 0.8
+   "\x1b\\[0J%s.*\x1b\\[[0-9]+G.*"  ; for Node.js 0.8
    "\\|"
-   "%s.*\x1b\\[0K\x1b\\[[0-9]+G"  ; for Node.js 0.4 or 0.6
+   "%s.*\x1b\\[0K\x1b\\[[0-9]+G.*"  ; for Node.js 0.4 or 0.6
    "\\)"
    "$"))
 (defvar nodejs-repl-prompt-re
@@ -177,7 +177,7 @@ See also `comint-process-echoes'")
   (process-put proc 'last-line "")
   (process-put proc 'running-p t)
   ;; trim trailing whitespaces
-  (setq string (replace-regexp-in-string "\\s-*$" "" string))
+  (setq string (replace-regexp-in-string "[ \t\r\n]*\\'" "" string))
   ;; TODO: write unit test for the case that the process returns 'foo' when string is 'foo\t'
   (while (or (process-get proc 'running-p)
              (not
@@ -210,16 +210,20 @@ when receive the output string"
             ;; remove LF
             (setq ret (replace-regexp-in-string "\n\\{2,\\}" "\n" ret))
             ;; trim trailing whitespaces
-            (setq ret (replace-regexp-in-string "\\s-*$" "" ret))
+            (setq ret (replace-regexp-in-string "[ \t\r\n]*\\'" "" ret))
             ;; don't split by whitespaces because the prompt may has whitespaces!!
             (setq candidates (split-string ret "\n"))
             ;; remove the first element (input) and the last element (prompt)
             (setq candidates (reverse (cdr (reverse (cdr candidates)))))
             ;; split by whitespaces
             ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
-            (setq candidates (split-string (mapconcat 'identity candidates " ") "\\s-+")))
-        (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
-        (setq candidates (list (nodejs-repl--get-last-token ret)))))
+            (setq candidates (split-string (mapconcat 'identity candidates " ") "[ \t\r\n]+"))
+)
+          (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
+          (let ((candidate-token (nodejs-repl--get-last-token ret)))
+            (setq candidates (if (equal candidate-token token)
+                                 nil
+                               (list candidate-token))))))
     candidates))
 
 

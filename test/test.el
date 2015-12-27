@@ -1,4 +1,4 @@
-(require 'el-expectations)
+(require 'ert-expectations)
 
 (expectations
   (desc "run Node.js REPL")
@@ -47,11 +47,11 @@
       (string-match-p "a\n\nb\n\\(undefined\\)?" (buffer-string))))
 
   (desc "nodejs-repl-get-candidates")
-  (expect '("Math")
-    (delete-dups (nodejs-repl-get-candidates "Ma")))
-  (expect '("Math")
-    (delete-dups (nodejs-repl-get-candidates "Mat")))
-  (expect "Ma"  ; use cache?
+  (expect '("Error")
+    (delete-dups (nodejs-repl-get-candidates "Err")))
+  (expect '("Error")
+    (delete-dups (nodejs-repl-get-candidates "Erro")))
+  (expect "Err"  ; use cache?
     nodejs-repl-cache-token)
   (expect '("Math.max" "Math.min")
     (nodejs-repl-get-candidates "Math.m"))
@@ -90,3 +90,4 @@
     (kill-process nodejs-repl-process-name)
     (nodejs-repl))
   )
+

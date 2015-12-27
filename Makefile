@@ -1,19 +1,15 @@
-TARGET=nodejs-mode
-ifdef LIB
-	OPT=-L $(LIB)
-else
-	OPT=-L $(HOME)/.emacs.d/site-lisp
-endif
+export EMACS = $(shell which emacs)
+TARGET = nodejs-repl
 
 all: $(TARGET).elc
 
 clean:
-	@rm -f $(TARGET).elc $(TARGET).el~
+	@cask clean-elc
 
 test:
-	@sh test/test.sh test/test.el
+	cask exec ${EMACS} -Q --batch -L . -l test/test.el -f ert-run-tests-batch-and-exit
 
 .el.elc:
-	emacs $(OPT) -batch -f batch-byte-compile $<
+	@cask build
 
 .PHONY: clean test
