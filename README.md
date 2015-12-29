@@ -1,5 +1,7 @@
-nodejs-repl.el --- Run Node.js REPL
+nodejs-repl.el
 ===================================
+
+Run Node.js REPL in Emacs
 
 Description
 -----------
@@ -32,7 +34,7 @@ Takeshi Arabiki (abicky)
 Copyright and License
 ---------------------
 
-Copyright (C) 2012-2013  Takeshi Arabiki (abicky)
+Copyright (C) 2012-2015  Takeshi Arabiki (abicky)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
