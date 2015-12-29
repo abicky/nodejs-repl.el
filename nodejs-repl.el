@@ -231,6 +231,22 @@ when receive the output string"
         (setq candidates (list (nodejs-repl--get-last-token ret)))))
     candidates))
 
+(defun nodejs-repl--filter-escape-sequnces (string)
+  "Filter extra escape sequences from output."
+  (let ((beg (or comint-last-output-start
+                 (point-min-marker)))
+        (end (process-mark (get-buffer-process (current-buffer)))))
+    (save-excursion
+      (goto-char beg)
+      ;; Remove ansi escape sequences used in readline.js
+      (while (re-search-forward nodejs-repl-extra-espace-sequence-re end t)
+        (replace-match "")))))
+
+(defun nodejs-repl--clear-cache (string)
+  "Clear caches when outputting the result."
+  (setq nodejs-repl-cache-token "")
+  (setq nodejs-repl-cache-candidates ()))
+
 
 ;;;--------------------------
 ;;; Public functions
@@ -330,31 +346,13 @@ otherwise spawn one."
       (setq nodejs-repl-cache-candidates candidates))
     candidates))
 
-;;; a function belong to comint-output-filter-functions must have one argument
-(defun nodejs-repl-filter-escape-sequnces (string)
-  "Filter extra escape sequences from output."
-  (let ((beg (or comint-last-output-start
-                 (point-min-marker)))
-        (end (process-mark (get-buffer-process (current-buffer)))))
-    (save-excursion
-      (goto-char beg)
-      ;; remove ansi escape sequences used in readline.js
-      (while (re-search-forward nodejs-repl-extra-espace-sequence-re end t)
-        (replace-match "")))))
-
-;;; a function belong to comint-output-filter-functions must have one argument
-(defun nodejs-repl-clear-cache (string)
-  "Clear caches when outputting the result."
-  (setq nodejs-repl-cache-token "")
-  (setq nodejs-repl-cache-candidates ()))
-
 
 (define-derived-mode nodejs-repl-mode comint-mode "Node.js REPL"
   "Major mode for Node.js REPL"
   :syntax-table nodejs-repl-mode-syntax-table
   (set (make-local-variable 'font-lock-defaults) '(nil nil t))
-  (add-hook 'comint-output-filter-functions 'nodejs-repl-filter-escape-sequnces nil t)
-  (add-hook 'comint-output-filter-functions 'nodejs-repl-clear-cache nil t)
+  (add-hook 'comint-output-filter-functions 'nodejs-repl--filter-escape-sequnces nil t)
+  (add-hook 'comint-output-filter-functions 'nodejs-repl--clear-cache nil t)
   (setq comint-input-ignoredups nodejs-repl-input-ignoredups)
   (setq comint-process-echoes nodejs-repl-process-echoes)
   ;; delq seems to change global variables if called this phase
