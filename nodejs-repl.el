@@ -247,11 +247,6 @@ when receive the output string"
 (defun nodejs-repl-send-region (start end)
   "Send the current region to the `nodejs-repl-process'"
   (interactive "r")
-  (nodejs-repl--send-string (buffer-substring start end)))
-
-(defun nodejs-repl-send-region (start end)
-  "Send the current region to the `nodejs-repl-process'"
-  (interactive "r")
   (comint-send-region (get-process nodejs-repl-process-name) start end)
   (comint-send-string (get-process nodejs-repl-process-name) "\n"))
 
