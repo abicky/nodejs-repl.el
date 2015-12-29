@@ -247,8 +247,12 @@ when receive the output string"
 (defun nodejs-repl-send-region (start end)
   "Send the current region to the `nodejs-repl-process'"
   (interactive "r")
-  (comint-send-region (get-process nodejs-repl-process-name) start end)
-  (comint-send-string (get-process nodejs-repl-process-name) "\n"))
+  (let ((proc (get-process nodejs-repl-process-name)))
+    (unless (processp proc)
+      (save-excursion (nodejs-repl))
+      (setq proc (get-process nodejs-repl-process-name)))
+    (comint-send-region proc start end)
+    (comint-send-string proc "\n")))
 
 (defun nodejs-repl-send-buffer ()
   "Send the current buffer to the `nodejs-repl-process'"
