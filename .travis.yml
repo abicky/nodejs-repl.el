@@ -1,0 +1,23 @@
+language: node_js
+node_js:
+  - "0.6"
+  - "0.8"
+  - "0.10"
+  - "0.12"
+  - "4.2"
+  - "stable"
+
+env:
+  - EVM_EMACS=emacs-24.1-travis
+  - EVM_EMACS=emacs-24.2-travis
+  - EVM_EMACS=emacs-24.3-travis
+  - EVM_EMACS=emacs-24.4-travis
+  - EVM_EMACS=emacs-24.5-travis
+
+before_install:
+  - curl -fsSkL https://gist.github.com/rejeep/ebcd57c3af83b049833b/raw > x.sh && source ./x.sh
+  - evm install $EVM_EMACS --use --skip
+  - cask
+
+script:
+  - make test
