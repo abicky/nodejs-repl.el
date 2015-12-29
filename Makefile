@@ -1,13 +1,16 @@
-export EMACS = $(shell which emacs)
+export EMACS ?= $(shell which emacs)
 TARGET = nodejs-repl
 
-all: $(TARGET).elc
+all: compile
+
+compile: $(TARGET).elc
 
 clean:
 	@cask clean-elc
 
-test:
+test: compile
 	cask exec ${EMACS} -Q --batch -L . -l test/test.el -f ert-run-tests-batch-and-exit
+	${MAKE} clean
 
 .el.elc:
 	@cask build
