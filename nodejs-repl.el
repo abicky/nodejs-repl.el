@@ -52,26 +52,15 @@
   :group 'nodejs-repl
   :type 'string)
 
+(defcustom nodejs-repl-arguments '()
+  "Command line parameters forwarded to `nodejs-repl-command'."
+  :group 'nodejs-repl
+  :type '(repeat string))
+
 (defcustom nodejs-repl-prompt "> "
   "Node.js prompt used in `nodejs-repl-mode'."
   :group 'nodejs-repl
   :type 'string)
-
-;; process.stdout.columns should be set.
-;; Node.js 0.8 and 0.10 uses this value as the maximum number of columns,
-;; but process.stdout.columns in Emacs is infinity because Emacs returns 0 as winsize.ws_col.
-;; The completion candidates won't be displayed if process.stdout.columns is infinity.
-;; see also `handleGroup` function in readline.js
-(defcustom nodejs-repl-arguments
-  (lambda (prompt)
-    (list "-e"
-          (format
-           "process.stdout.columns = %d;require('repl').start('%s', null, null, true, false)" (window-width) prompt)))
-  "A Function that returns the command line parameters to pass to
-the `nodejs-repl-command'. The function takes
-`nodejs-repl-prompt' as an argument."
-  :group 'nodejs-repl
-  :type 'function)
 
 
 (defcustom nodejs-repl-input-ignoredups t
@@ -107,6 +96,18 @@ See also `comint-process-echoes'"
     (define-key map (kbd "TAB") 'comint-dynamic-complete)
     (define-key map (kbd "C-c C-c") 'nodejs-repl-quit-or-cancel)
     map))
+
+;; process.stdout.columns should be set.
+;; Node.js 0.8 and 0.10 uses this value as the maximum number of columns,
+;; but process.stdout.columns in Emacs is infinity because Emacs returns 0 as winsize.ws_col.
+;; The completion candidates won't be displayed if process.stdout.columns is infinity.
+;; see also `handleGroup` function in readline.js
+(defvar nodejs-repl-code
+  (concat
+   "process.stdout.columns = %d;"
+   "require('repl').start('%s', null, null, true, false)"))
+
+
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 
@@ -371,7 +372,7 @@ otherwise spawn one."
         (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
   (switch-to-buffer-other-window
    (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
-          (funcall nodejs-repl-arguments nodejs-repl-prompt)))
+          `(,@nodejs-repl-arguments "-e" ,(format nodejs-repl-code (window-width) nodejs-repl-prompt))))
   (nodejs-repl-mode))
 
 (provide 'nodejs-repl)
