@@ -238,7 +238,7 @@ when receive the output string"
 (defun nodejs-repl-quit-or-cancel ()
   "Send ^C to Node.js process."
   (interactive)
-  (process-send-string (get-process "node") "\x03"))
+  (process-send-string (get-process nodejs-repl-process-name) "\x03"))
 
 (defun nodejs-repl-clear-line ()
   "Send ^U to Node.js process."
