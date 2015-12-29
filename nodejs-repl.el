@@ -52,15 +52,44 @@
   :group 'nodejs-repl
   :type 'string)
 
-(defcustom nodejs-repl-arguments '()
-  "Command line parameters forwarded to `nodejs-repl-command'."
-  :group 'nodejs-repl
-  :type '(repeat string))
-
 (defcustom nodejs-repl-prompt "> "
   "Node.js prompt used in `nodejs-repl-mode'."
   :group 'nodejs-repl
   :type 'string)
+
+;; process.stdout.columns should be set.
+;; Node.js 0.8 and 0.10 uses this value as the maximum number of columns,
+;; but process.stdout.columns in Emacs is infinity because Emacs returns 0 as winsize.ws_col.
+;; The completion candidates won't be displayed if process.stdout.columns is infinity.
+;; see also `handleGroup` function in readline.js
+(defcustom nodejs-repl-arguments
+  (lambda (prompt)
+    (list "-e"
+          (format
+           "process.stdout.columns = %d;require('repl').start('%s', null, null, true, false)" (window-width) prompt)))
+  "A Function that returns the command line parameters to pass to
+the `nodejs-repl-command'. The function takes
+`nodejs-repl-prompt' as an argument."
+  :group 'nodejs-repl
+  :type 'function)
+
+
+(defcustom nodejs-repl-input-ignoredups t
+  "If non-nil, don't add input matching the last on the input ring.
+
+See also `comint-input-ignoredups'"
+  :group 'nodejs-repl
+  :type 'boolean)
+
+(defcustom nodejs-repl-process-echoes t
+  "If non-nil, Node.js does not echo any input.
+
+See also `comint-process-echoes'"
+  :group 'nodejs-repl
+  :type 'boolean)
+
+(defvar nodejs-repl-mode-hook nil
+  "Functions runafter `nodejs-repl' is started.")
 
 (defvar nodejs-repl-process-name "nodejs"
   "process name of Node.js REPL.")
@@ -79,29 +108,10 @@
     (define-key map (kbd "C-c C-c") 'nodejs-repl-quit-or-cancel)
     map))
 
-;; process.stdout.columns should be set.
-;; Node.js 0.8 and 0.10 uses this value as the maximum number of columns,
-;; but process.stdout.columns in Emacs is infinity because Emacs returns 0 as winsize.ws_col.
-;; The completion candidates won't be displayed if process.stdout.columns is infinity.
-;; see also `handleGroup` function in readline.js
-(defvar nodejs-repl-code
-  (concat
-   "process.stdout.columns = %d;"
-   "require('repl').start('%s', null, null, true, false)"))
-
-
-(defvar nodejs-repl-input-ignoredups t
-  "If non-nil, don't add input matching the last on the input ring.
-
-See also `comint-input-ignoredups'")
-
-(defvar nodejs-repl-process-echoes t
-  "If non-nil, Node.js does not echo any input.
-
-See also `comint-process-echoes'")
-
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
+
 (defvar nodejs-repl-ansi-color-sequence-re "\\(\x1b\\[[0-9]+m\\)")
+
 ;;; if send string like "a; Ma\t", return a; Math\x1b[1G> a; Math\x1b[0K\x1b[10G
 (defvar nodejs-repl-prompt-re-format
   (concat
@@ -196,7 +206,7 @@ when receive the output string"
     (process-put proc 'last-line (buffer-substring (point-at-bol) (point)))))
 
 (defun nodejs-repl--get-candidates-from-process (token)
-  "Get copmletion candidates sending TAB to Node.js process."
+  "Get completion candidates sending TAB to Node.js process."
   (let ((ret (nodejs-repl--send-string (concat token "\t")))
          candidates)
     (nodejs-repl-clear-line)
@@ -232,6 +242,39 @@ when receive the output string"
 (defun nodejs-repl-clear-line ()
   "Send ^U to Node.js process."
   (nodejs-repl--send-string "\x15"))
+
+(defun nodejs-repl-send-region (start end)
+  "Send the current region to the `nodejs-repl-process'"
+  (interactive "r")
+  (nodejs-repl--send-string (buffer-substring start end)))
+
+(defun nodejs-repl-send-region (start end)
+  "Send the current region to the `nodejs-repl-process'"
+  (interactive "r")
+  (comint-send-region (get-process nodejs-repl-process-name) start end)
+  (comint-send-string (get-process nodejs-repl-process-name) "\n"))
+
+(defun nodejs-repl-load-file ()
+  "Load the file to the `nodejs-repl-process'"
+  (interactive)
+  (nodejs-repl-send-region (point-min) (point-max)))
+
+(defun nodejs-repl-send-last-sexp ()
+  "Send the expression before point to the `nodejs-repl-process'"
+  (interactive)
+  (nodejs-repl-send-region (save-excursion (backward-sexp)
+                             (point))
+                           (point)))
+
+(defun nodejs-repl-switch-to-repl ()
+  "If there is a `nodejs-repl-process' running switch to it,
+otherwise spawn one."
+  (interactive)
+  (let ((nodejs-process (get-process nodejs-repl-process-name)))
+    (if (processp nodejs-process)
+        (switch-to-buffer-other-window
+         (process-buffer nodejs-process))
+      (nodejs-repl))))
 
 (defun nodejs-repl-execute (command &optional buf)
   "Execute a command and output the result to the temporary buffer."
@@ -328,7 +371,7 @@ when receive the output string"
         (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
   (switch-to-buffer-other-window
    (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
-          `(,@nodejs-repl-arguments "-e" ,(format nodejs-repl-code (window-width) nodejs-repl-prompt))))
+          (funcall nodejs-repl-arguments nodejs-repl-prompt)))
   (nodejs-repl-mode))
 
 (provide 'nodejs-repl)
