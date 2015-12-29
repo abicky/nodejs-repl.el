@@ -105,11 +105,8 @@ See also `comint-process-echoes'"
 (defvar nodejs-repl-code-format
   (concat
    "process.stdout.columns = %d;"
-   "var repl = require('repl');"
-   "var replMode = repl['REPL_MODE_' + '%s'.toUpperCase()];"
-   "repl.start('%s', null, null, true, false, replMode)"))
-
-
+   "require('repl').start('%s', null, null, true, false, "
+   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()])"))
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 
@@ -393,7 +390,7 @@ otherwise spawn one."
         (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
   (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
          (nodejs-repl-code (format nodejs-repl-code-format
-                                   (window-width) repl-mode nodejs-repl-prompt)))
+                                   (window-width) nodejs-repl-prompt repl-mode )))
     (switch-to-buffer-other-window
      (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
             `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
