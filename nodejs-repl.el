@@ -250,8 +250,8 @@ when receive the output string"
   (comint-send-region (get-process nodejs-repl-process-name) start end)
   (comint-send-string (get-process nodejs-repl-process-name) "\n"))
 
-(defun nodejs-repl-load-file ()
-  "Load the file to the `nodejs-repl-process'"
+(defun nodejs-repl-send-buffer ()
+  "Send the current buffer to the `nodejs-repl-process'"
   (interactive)
   (nodejs-repl-send-region (point-min) (point-max)))
 
