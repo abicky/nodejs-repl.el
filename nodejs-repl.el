@@ -231,6 +231,13 @@ when receive the output string"
         (setq candidates (list (nodejs-repl--get-last-token ret)))))
     candidates))
 
+(defun nodejs-repl--get-or-create-process ()
+  (let ((proc (get-process nodejs-repl-process-name)))
+    (unless (processp proc)
+      (save-excursion (nodejs-repl))
+      (setq proc (get-process nodejs-repl-process-name)))
+    proc))
+
 (defun nodejs-repl--filter-escape-sequnces (string)
   "Filter extra escape sequences from output."
   (let ((beg (or comint-last-output-start
@@ -246,6 +253,16 @@ when receive the output string"
   "Clear caches when outputting the result."
   (setq nodejs-repl-cache-token "")
   (setq nodejs-repl-cache-candidates ()))
+
+(defun nodejs-repl--remove-duplicated-prompt (string)
+  ;; `.load` command of Node.js repl outputs a duplicated prompt
+  (let ((beg (or comint-last-output-start
+                 (point-min-marker)))
+        (end (process-mark (get-buffer-process (current-buffer)))))
+    (save-excursion
+      (goto-char beg)
+      (when (re-search-forward (concat nodejs-repl-prompt nodejs-repl-prompt) end t)
+        (replace-match nodejs-repl-prompt)))))
 
 
 ;;;--------------------------
@@ -263,10 +280,7 @@ when receive the output string"
 (defun nodejs-repl-send-region (start end)
   "Send the current region to the `nodejs-repl-process'"
   (interactive "r")
-  (let ((proc (get-process nodejs-repl-process-name)))
-    (unless (processp proc)
-      (save-excursion (nodejs-repl))
-      (setq proc (get-process nodejs-repl-process-name)))
+  (let ((proc (nodejs-repl--get-or-create-process)))
     (comint-send-region proc start end)
     (comint-send-string proc "\n")))
 
@@ -274,6 +288,12 @@ when receive the output string"
   "Send the current buffer to the `nodejs-repl-process'"
   (interactive)
   (nodejs-repl-send-region (point-min) (point-max)))
+
+(defun nodejs-repl-load-file (file)
+  "Load the file to the `nodejs-repl-process'"
+  (interactive (list (read-file-name "Load file: " nil nil 'lambda)))
+  (let ((proc (nodejs-repl--get-or-create-process)))
+    (comint-send-string proc (format ".load %s" file))))
 
 (defun nodejs-repl-send-last-sexp ()
   "Send the expression before point to the `nodejs-repl-process'"
@@ -286,11 +306,8 @@ when receive the output string"
   "If there is a `nodejs-repl-process' running switch to it,
 otherwise spawn one."
   (interactive)
-  (let ((nodejs-process (get-process nodejs-repl-process-name)))
-    (if (processp nodejs-process)
-        (switch-to-buffer-other-window
-         (process-buffer nodejs-process))
-      (nodejs-repl))))
+  (switch-to-buffer-other-window
+   (process-buffer (nodejs-repl--get-or-create-process))))
 
 (defun nodejs-repl-execute (command &optional buf)
   "Execute a command and output the result to the temporary buffer."
@@ -351,6 +368,7 @@ otherwise spawn one."
   "Major mode for Node.js REPL"
   :syntax-table nodejs-repl-mode-syntax-table
   (set (make-local-variable 'font-lock-defaults) '(nil nil t))
+  (add-hook 'comint-output-filter-functions 'nodejs-repl--remove-duplicated-prompt nil t)
   (add-hook 'comint-output-filter-functions 'nodejs-repl--filter-escape-sequnces nil t)
   (add-hook 'comint-output-filter-functions 'nodejs-repl--clear-cache nil t)
   (setq comint-input-ignoredups nodejs-repl-input-ignoredups)
