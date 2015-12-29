@@ -62,6 +62,24 @@
   :group 'nodejs-repl
   :type 'string)
 
+
+(defcustom nodejs-repl-input-ignoredups t
+  "If non-nil, don't add input matching the last on the input ring.
+
+See also `comint-input-ignoredups'"
+  :group 'nodejs-repl
+  :type 'boolean)
+
+(defcustom nodejs-repl-process-echoes t
+  "If non-nil, Node.js does not echo any input.
+
+See also `comint-process-echoes'"
+  :group 'nodejs-repl
+  :type 'boolean)
+
+(defvar nodejs-repl-mode-hook nil
+  "Functions runafter `nodejs-repl' is started.")
+
 (defvar nodejs-repl-process-name "nodejs"
   "process name of Node.js REPL.")
 
@@ -92,18 +110,11 @@
    "repl.start('%s', null, null, true, false, replMode)"))
 
 
-(defvar nodejs-repl-input-ignoredups t
-  "If non-nil, don't add input matching the last on the input ring.
-
-See also `comint-input-ignoredups'")
-
-(defvar nodejs-repl-process-echoes t
-  "If non-nil, Node.js does not echo any input.
-
-See also `comint-process-echoes'")
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
+
 (defvar nodejs-repl-ansi-color-sequence-re "\\(\x1b\\[[0-9]+m\\)")
+
 ;;; if send string like "a; Ma\t", return a; Math\x1b[1G> a; Math\x1b[0K\x1b[10G
 (defvar nodejs-repl-prompt-re-format
   (concat
@@ -198,7 +209,7 @@ when receive the output string"
     (process-put proc 'last-line (buffer-substring (point-at-bol) (point)))))
 
 (defun nodejs-repl--get-candidates-from-process (token)
-  "Get copmletion candidates sending TAB to Node.js process."
+  "Get completion candidates sending TAB to Node.js process."
   (let ((ret (nodejs-repl--send-string (concat token "\t")))
          candidates)
     (nodejs-repl-clear-line)
@@ -226,6 +237,39 @@ when receive the output string"
                                (list candidate-token))))))
     candidates))
 
+(defun nodejs-repl--get-or-create-process ()
+  (let ((proc (get-process nodejs-repl-process-name)))
+    (unless (processp proc)
+      (save-excursion (nodejs-repl))
+      (setq proc (get-process nodejs-repl-process-name)))
+    proc))
+
+(defun nodejs-repl--filter-escape-sequnces (string)
+  "Filter extra escape sequences from output."
+  (let ((beg (or comint-last-output-start
+                 (point-min-marker)))
+        (end (process-mark (get-buffer-process (current-buffer)))))
+    (save-excursion
+      (goto-char beg)
+      ;; Remove ansi escape sequences used in readline.js
+      (while (re-search-forward nodejs-repl-extra-espace-sequence-re end t)
+        (replace-match "")))))
+
+(defun nodejs-repl--clear-cache (string)
+  "Clear caches when outputting the result."
+  (setq nodejs-repl-cache-token "")
+  (setq nodejs-repl-cache-candidates ()))
+
+(defun nodejs-repl--remove-duplicated-prompt (string)
+  ;; `.load` command of Node.js repl outputs a duplicated prompt
+  (let ((beg (or comint-last-output-start
+                 (point-min-marker)))
+        (end (process-mark (get-buffer-process (current-buffer)))))
+    (save-excursion
+      (goto-char beg)
+      (when (re-search-forward (concat nodejs-repl-prompt nodejs-repl-prompt) end t)
+        (replace-match nodejs-repl-prompt)))))
+
 
 ;;;--------------------------
 ;;; Public functions
@@ -233,11 +277,43 @@ when receive the output string"
 (defun nodejs-repl-quit-or-cancel ()
   "Send ^C to Node.js process."
   (interactive)
-  (process-send-string (get-process "node") "\x03"))
+  (process-send-string (get-process nodejs-repl-process-name) "\x03"))
 
 (defun nodejs-repl-clear-line ()
   "Send ^U to Node.js process."
   (nodejs-repl--send-string "\x15"))
+
+(defun nodejs-repl-send-region (start end)
+  "Send the current region to the `nodejs-repl-process'"
+  (interactive "r")
+  (let ((proc (nodejs-repl--get-or-create-process)))
+    (comint-send-region proc start end)
+    (comint-send-string proc "\n")))
+
+(defun nodejs-repl-send-buffer ()
+  "Send the current buffer to the `nodejs-repl-process'"
+  (interactive)
+  (nodejs-repl-send-region (point-min) (point-max)))
+
+(defun nodejs-repl-load-file (file)
+  "Load the file to the `nodejs-repl-process'"
+  (interactive (list (read-file-name "Load file: " nil nil 'lambda)))
+  (let ((proc (nodejs-repl--get-or-create-process)))
+    (comint-send-string proc (format ".load %s" file))))
+
+(defun nodejs-repl-send-last-sexp ()
+  "Send the expression before point to the `nodejs-repl-process'"
+  (interactive)
+  (nodejs-repl-send-region (save-excursion (backward-sexp)
+                             (point))
+                           (point)))
+
+(defun nodejs-repl-switch-to-repl ()
+  "If there is a `nodejs-repl-process' running switch to it,
+otherwise spawn one."
+  (interactive)
+  (switch-to-buffer-other-window
+   (process-buffer (nodejs-repl--get-or-create-process))))
 
 (defun nodejs-repl-execute (command &optional buf)
   "Execute a command and output the result to the temporary buffer."
@@ -293,31 +369,14 @@ when receive the output string"
       (setq nodejs-repl-cache-candidates candidates))
     candidates))
 
-;;; a function belong to comint-output-filter-functions must have one argument
-(defun nodejs-repl-filter-escape-sequnces (string)
-  "Filter extra escape sequences from output."
-  (let ((beg (or comint-last-output-start
-                 (point-min-marker)))
-        (end (process-mark (get-buffer-process (current-buffer)))))
-    (save-excursion
-      (goto-char beg)
-      ;; remove ansi escape sequences used in readline.js
-      (while (re-search-forward nodejs-repl-extra-espace-sequence-re end t)
-        (replace-match "")))))
-
-;;; a function belong to comint-output-filter-functions must have one argument
-(defun nodejs-repl-clear-cache (string)
-  "Clear caches when outputting the result."
-  (setq nodejs-repl-cache-token "")
-  (setq nodejs-repl-cache-candidates ()))
-
 
 (define-derived-mode nodejs-repl-mode comint-mode "Node.js REPL"
   "Major mode for Node.js REPL"
   :syntax-table nodejs-repl-mode-syntax-table
   (set (make-local-variable 'font-lock-defaults) '(nil nil t))
-  (add-hook 'comint-output-filter-functions 'nodejs-repl-filter-escape-sequnces nil t)
-  (add-hook 'comint-output-filter-functions 'nodejs-repl-clear-cache nil t)
+  (add-hook 'comint-output-filter-functions 'nodejs-repl--remove-duplicated-prompt nil t)
+  (add-hook 'comint-output-filter-functions 'nodejs-repl--filter-escape-sequnces nil t)
+  (add-hook 'comint-output-filter-functions 'nodejs-repl--clear-cache nil t)
   (setq comint-input-ignoredups nodejs-repl-input-ignoredups)
   (setq comint-process-echoes nodejs-repl-process-echoes)
   ;; delq seems to change global variables if called this phase
