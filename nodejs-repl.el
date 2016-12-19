@@ -309,7 +309,7 @@ when receive the output string"
   "If there is a `nodejs-repl-process' running switch to it,
 otherwise spawn one."
   (interactive)
-  (switch-to-buffer-other-window
+  (pop-to-buffer
    (process-buffer (nodejs-repl--get-or-create-process))))
 
 (defun nodejs-repl-execute (command &optional buf)
@@ -391,7 +391,7 @@ otherwise spawn one."
   (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
          (nodejs-repl-code (format nodejs-repl-code-format
                                    (window-width) nodejs-repl-prompt repl-mode )))
-    (switch-to-buffer-other-window
+    (pop-to-buffer
      (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
             `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
     (nodejs-repl-mode)))
