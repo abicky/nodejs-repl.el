@@ -296,7 +296,7 @@ when receive the output string"
   "Load the file to the `nodejs-repl-process'"
   (interactive (list (read-file-name "Load file: " nil nil 'lambda)))
   (let ((proc (nodejs-repl--get-or-create-process)))
-    (comint-send-string proc (format ".load %s" file))))
+    (comint-send-string proc (format ".load %s\n" file))))
 
 (defun nodejs-repl-send-last-sexp ()
   "Send the expression before point to the `nodejs-repl-process'"
