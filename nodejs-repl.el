@@ -35,6 +35,15 @@
 ;; Type M-x nodejs-repl to run Node.js REPL.
 ;; See also `comint-mode' to check key bindings.
 ;;
+;; You can define key bindings to send JavaScript codes to REPL like below:
+;;
+;;     (add-hook 'js-mode-hook
+;;               (lambda ()
+;;                 (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-sexp)
+;;                 (define-key js-mode-map (kbd "C-c C-r") 'nodejs-repl-send-region)
+;;                 (define-key js-mode-map (kbd "C-c C-l") 'nodejs-repl-load-file)
+;;                 (define-key js-mode-map (kbd "C-c C-z") 'nodejs-repl-switch-to-repl)))
+;;
 
 (require 'cc-mode)
 (require 'comint)
@@ -280,6 +289,7 @@ when receive the output string"
   "Send ^U to Node.js process."
   (nodejs-repl--send-string "\x15"))
 
+;;;###autoload
 (defun nodejs-repl-send-region (start end)
   "Send the current region to the `nodejs-repl-process'"
   (interactive "r")
@@ -287,17 +297,20 @@ when receive the output string"
     (comint-send-region proc start end)
     (comint-send-string proc "\n")))
 
+;;;###autoload
 (defun nodejs-repl-send-buffer ()
   "Send the current buffer to the `nodejs-repl-process'"
   (interactive)
   (nodejs-repl-send-region (point-min) (point-max)))
 
+;;;###autoload
 (defun nodejs-repl-load-file (file)
   "Load the file to the `nodejs-repl-process'"
   (interactive (list (read-file-name "Load file: " nil nil 'lambda)))
   (let ((proc (nodejs-repl--get-or-create-process)))
     (comint-send-string proc (format ".load %s\n" file))))
 
+;;;###autoload
 (defun nodejs-repl-send-last-sexp ()
   "Send the expression before point to the `nodejs-repl-process'"
   (interactive)
@@ -305,6 +318,7 @@ when receive the output string"
                              (point))
                            (point)))
 
+;;;###autoload
 (defun nodejs-repl-switch-to-repl ()
   "If there is a `nodejs-repl-process' running switch to it,
 otherwise spawn one."
