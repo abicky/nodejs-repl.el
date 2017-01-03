@@ -4,8 +4,10 @@ node_js:
   - "0.8"
   - "0.10"
   - "0.12"
-  - "4.2"
-  - "stable"
+  - "4"
+  - "5"
+  - "6"
+  - "node"
 
 env:
   - EVM_EMACS=emacs-24.1-travis
@@ -13,6 +15,7 @@ env:
   - EVM_EMACS=emacs-24.3-travis
   - EVM_EMACS=emacs-24.4-travis
   - EVM_EMACS=emacs-24.5-travis
+  - EVM_EMACS=emacs-25.1-travis
 
 before_install:
   - curl -fsSkL https://gist.github.com/rejeep/ebcd57c3af83b049833b/raw > x.sh && source ./x.sh

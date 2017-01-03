@@ -86,6 +86,8 @@ See also `comint-process-echoes'"
   :group 'nodejs-repl
   :type 'boolean)
 
+(defvar nodejs-repl-nodejs-version)
+
 (defvar nodejs-repl-mode-hook nil
   "Functions runafter `nodejs-repl' is started.")
 
@@ -216,8 +218,11 @@ when receive the output string"
 
 (defun nodejs-repl--get-candidates-from-process (token)
   "Get completion candidates sending TAB to Node.js process."
-  (let ((ret (nodejs-repl--send-string (concat token "\t")))
-         candidates)
+  (let ((ret (if (version< nodejs-repl-nodejs-version "7.0.0")
+                 (nodejs-repl--send-string (concat token "\t"))
+               (nodejs-repl--send-string (concat token "\t"))
+               (nodejs-repl--send-string "\t")))
+        candidates)
     (nodejs-repl-clear-line)
     (when (not (equal ret token))
       (if (string-match-p "\n" ret)
@@ -228,17 +233,19 @@ when receive the output string"
             (setq ret (replace-regexp-in-string "\n\\{2,\\}" "\n" ret))
             ;; trim trailing whitespaces
             (setq ret (replace-regexp-in-string "[ \t\r\n]*\\'" "" ret))
-            ;; don't split by whitespaces because the prompt may has whitespaces!!
+            ;; don't split by whitespaces because the prompt might have whitespaces!!
             (setq candidates (split-string ret "\n"))
             ;; remove the first element (input) and the last element (prompt)
             (setq candidates (reverse (cdr (reverse (cdr candidates)))))
             ;; split by whitespaces
             ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
-            (setq candidates (split-string (mapconcat 'identity candidates " ") "[ \t\r\n]+"))
+            (setq candidates (split-string
+                              (replace-regexp-in-string " *$" "" (mapconcat 'identity candidates " "))
+                              "[ \t\r\n]+"))
 )
           (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
           (let ((candidate-token (nodejs-repl--get-last-token ret)))
-            (setq candidates (if (equal candidate-token token)
+            (setq candidates (if (or (null candidate-token) (equal candidate-token token))
                                  nil
                                (list candidate-token))))))
     candidates))
@@ -402,6 +409,8 @@ otherwise spawn one."
   (interactive)
   (setq nodejs-repl-prompt-re
         (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
+  (setq nodejs-repl-nodejs-version
+        (replace-regexp-in-string "^v\\([0-9.]+\\)[\r\n]*$" "\\1" (shell-command-to-string "node --version")))
   (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
          (nodejs-repl-code (format nodejs-repl-code-format
                                    (window-width) nodejs-repl-prompt repl-mode )))
