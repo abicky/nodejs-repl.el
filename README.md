@@ -43,7 +43,7 @@ Takeshi Arabiki (abicky)
 Copyright and License
 ---------------------
 
-Copyright (C) 2012-2015  Takeshi Arabiki (abicky)
+Copyright (C) 2012-2017  Takeshi Arabiki (abicky)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

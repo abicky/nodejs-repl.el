@@ -1,6 +1,6 @@
 ;;; nodejs-repl.el --- Run Node.js REPL
 
-;; Copyright (C) 2012-2015  Takeshi Arabiki
+;; Copyright (C) 2012-2017  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
 ;; Version: 0.1.0
