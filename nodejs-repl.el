@@ -87,6 +87,8 @@ See also `comint-process-echoes'"
   :type 'boolean)
 
 (defvar nodejs-repl-nodejs-version)
+(defvar nodejs-repl--nodejs-version-re
+  "^v\\([0-9]+\\(?:\\.[0-9]+\\)*\\)\\(?:\\.x\\)*\\(?:-\\w+\\)?[\r\n]*$")
 
 (defvar nodejs-repl-mode-hook nil
   "Functions runafter `nodejs-repl' is started.")
@@ -410,7 +412,8 @@ otherwise spawn one."
   (setq nodejs-repl-prompt-re
         (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
   (setq nodejs-repl-nodejs-version
-        (replace-regexp-in-string "^v\\([0-9.]+\\)[\r\n]*$" "\\1" (shell-command-to-string "node --version")))
+        ;; "v7.3.0" => "7.3.0", "v7.x-dev" => "7"
+        (replace-regexp-in-string nodejs-repl--nodejs-version-re "\\1" (shell-command-to-string "node --version")))
   (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
          (nodejs-repl-code (format nodejs-repl-code-format
                                    (window-width) nodejs-repl-prompt repl-mode )))
