@@ -1,9 +1,9 @@
 ;;; nodejs-repl.el --- Run Node.js REPL
 
-;; Copyright (C) 2012-2015  Takeshi Arabiki
+;; Copyright (C) 2012-2017  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: 0.1.0
+;; Version: 0.1.1
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -35,6 +35,15 @@
 ;; Type M-x nodejs-repl to run Node.js REPL.
 ;; See also `comint-mode' to check key bindings.
 ;;
+;; You can define key bindings to send JavaScript codes to REPL like below:
+;;
+;;     (add-hook 'js-mode-hook
+;;               (lambda ()
+;;                 (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-sexp)
+;;                 (define-key js-mode-map (kbd "C-c C-r") 'nodejs-repl-send-region)
+;;                 (define-key js-mode-map (kbd "C-c C-l") 'nodejs-repl-load-file)
+;;                 (define-key js-mode-map (kbd "C-c C-z") 'nodejs-repl-switch-to-repl)))
+;;
 
 (require 'cc-mode)
 (require 'comint)
@@ -44,7 +53,7 @@
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-repl-version "0.1.0"
+(defconst nodejs-repl-version "0.1.1"
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
@@ -76,6 +85,10 @@ See also `comint-input-ignoredups'"
 See also `comint-process-echoes'"
   :group 'nodejs-repl
   :type 'boolean)
+
+(defvar nodejs-repl-nodejs-version)
+(defvar nodejs-repl--nodejs-version-re
+  "^v\\([0-9]+\\(?:\\.[0-9]+\\)*\\)\\(?:\\.x\\)*\\(?:-\\w+\\)?[\r\n]*$")
 
 (defvar nodejs-repl-mode-hook nil
   "Functions runafter `nodejs-repl' is started.")
@@ -207,8 +220,11 @@ when receive the output string"
 
 (defun nodejs-repl--get-candidates-from-process (token)
   "Get completion candidates sending TAB to Node.js process."
-  (let ((ret (nodejs-repl--send-string (concat token "\t")))
-         candidates)
+  (let ((ret (if (version< nodejs-repl-nodejs-version "7.0.0")
+                 (nodejs-repl--send-string (concat token "\t"))
+               (nodejs-repl--send-string (concat token "\t"))
+               (nodejs-repl--send-string "\t")))
+        candidates)
     (nodejs-repl-clear-line)
     (when (not (equal ret token))
       (if (string-match-p "\n" ret)
@@ -219,17 +235,19 @@ when receive the output string"
             (setq ret (replace-regexp-in-string "\n\\{2,\\}" "\n" ret))
             ;; trim trailing whitespaces
             (setq ret (replace-regexp-in-string "[ \t\r\n]*\\'" "" ret))
-            ;; don't split by whitespaces because the prompt may has whitespaces!!
+            ;; don't split by whitespaces because the prompt might have whitespaces!!
             (setq candidates (split-string ret "\n"))
             ;; remove the first element (input) and the last element (prompt)
             (setq candidates (reverse (cdr (reverse (cdr candidates)))))
             ;; split by whitespaces
             ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
-            (setq candidates (split-string (mapconcat 'identity candidates " ") "[ \t\r\n]+"))
+            (setq candidates (split-string
+                              (replace-regexp-in-string " *$" "" (mapconcat 'identity candidates " "))
+                              "[ \t\r\n]+"))
 )
           (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
           (let ((candidate-token (nodejs-repl--get-last-token ret)))
-            (setq candidates (if (equal candidate-token token)
+            (setq candidates (if (or (null candidate-token) (equal candidate-token token))
                                  nil
                                (list candidate-token))))))
     candidates))
@@ -280,6 +298,7 @@ when receive the output string"
   "Send ^U to Node.js process."
   (nodejs-repl--send-string "\x15"))
 
+;;;###autoload
 (defun nodejs-repl-send-region (start end)
   "Send the current region to the `nodejs-repl-process'"
   (interactive "r")
@@ -287,17 +306,20 @@ when receive the output string"
     (comint-send-region proc start end)
     (comint-send-string proc "\n")))
 
+;;;###autoload
 (defun nodejs-repl-send-buffer ()
   "Send the current buffer to the `nodejs-repl-process'"
   (interactive)
   (nodejs-repl-send-region (point-min) (point-max)))
 
+;;;###autoload
 (defun nodejs-repl-load-file (file)
   "Load the file to the `nodejs-repl-process'"
   (interactive (list (read-file-name "Load file: " nil nil 'lambda)))
   (let ((proc (nodejs-repl--get-or-create-process)))
-    (comint-send-string proc (format ".load %s" file))))
+    (comint-send-string proc (format ".load %s\n" file))))
 
+;;;###autoload
 (defun nodejs-repl-send-last-sexp ()
   "Send the expression before point to the `nodejs-repl-process'"
   (interactive)
@@ -305,11 +327,12 @@ when receive the output string"
                              (point))
                            (point)))
 
+;;;###autoload
 (defun nodejs-repl-switch-to-repl ()
   "If there is a `nodejs-repl-process' running switch to it,
 otherwise spawn one."
   (interactive)
-  (switch-to-buffer-other-window
+  (pop-to-buffer
    (process-buffer (nodejs-repl--get-or-create-process))))
 
 (defun nodejs-repl-execute (command &optional buf)
@@ -388,10 +411,13 @@ otherwise spawn one."
   (interactive)
   (setq nodejs-repl-prompt-re
         (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
+  (setq nodejs-repl-nodejs-version
+        ;; "v7.3.0" => "7.3.0", "v7.x-dev" => "7"
+        (replace-regexp-in-string nodejs-repl--nodejs-version-re "\\1" (shell-command-to-string "node --version")))
   (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
          (nodejs-repl-code (format nodejs-repl-code-format
                                    (window-width) nodejs-repl-prompt repl-mode )))
-    (switch-to-buffer-other-window
+    (pop-to-buffer
      (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
             `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
     (nodejs-repl-mode)))
