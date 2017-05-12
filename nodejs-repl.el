@@ -117,9 +117,41 @@ See also `comint-process-echoes'"
 ;; see also `handleGroup` function in readline.js
 (defvar nodejs-repl-code-format
   (concat
-   "process.stdout.columns = %d;"
-   "require('repl').start('%s', null, null, true, false, "
-   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()])"))
+   "var repl = require('repl');"
+   "repl.start('%s', null, null, true, false, repl.REPL_MODE_%s)"))
+
+(defcustom nodejs-repl-eval-script
+  (cons (format "process.stdout.columns = %d;" (window-width))
+        'prepend)
+  "Custom Javascript code to evaluate at REPL startup time.
+This code will be directly used with the -e/--eval option that
+many Node.js REPLs expose.
+
+The option should be a cons cell where the car is a the
+Javascript string to evaluate and the cdr is the behavior
+nodejs-repl should apply while bootstrapping, e.g.:
+
+ - (setq nodejs-repl-eval-script '(\"...\" . prepend))
+   prepends the code to the current bootstrapping code
+
+ - (setq nodejs-repl-eval-script '(\"...\" . replace))
+   replaces the current bootstrapping code
+
+By default, the number of columns of the process is set and the
+repl is started. Note that:
+
+ - (setq nodejs-repl-eval-script '(\"\" . replace)) ;; empty
+
+Completely avoids passing the eval script to the Node.js
+process."
+  :group 'nodejs-repl
+  :type '(cons string
+               (choice (const :tag "Replace" replace)
+                       (const :tag "Prepend" prepend))))
+
+(defun nodejs-repl-sanitize-script (script)
+  (let ((s (replace-regexp-in-string ";+$" "" script)))
+    (concat s ";")))
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 
@@ -415,11 +447,18 @@ otherwise spawn one."
         ;; "v7.3.0" => "7.3.0", "v7.x-dev" => "7"
         (replace-regexp-in-string nodejs-repl--nodejs-version-re "\\1" (shell-command-to-string "node --version")))
   (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
-         (nodejs-repl-code (format nodejs-repl-code-format
-                                   (window-width) nodejs-repl-prompt repl-mode )))
+         (bootstrap-script (format nodejs-repl-code-format nodejs-repl-prompt repl-mode))
+         (eval-script (pcase (cdr nodejs-repl-eval-script)
+                        (`replace (car nodejs-repl-eval-script))
+                        (`prepend (concat (nodejs-repl-sanitize-script (car nodejs-repl-eval-script))
+                                          bootstrap-script))
+                        (_ bootstrap-script)))
+         (nodejs-repl-arguments (append nodejs-repl-arguments
+                                        (when (not (string-empty-p eval-script))
+                                          (list "-e" eval-script)))))
     (pop-to-buffer
      (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
-            `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
+            `(,@nodejs-repl-arguments)))
     (nodejs-repl-mode)))
 
 (provide 'nodejs-repl)
