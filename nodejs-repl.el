@@ -149,6 +149,11 @@ See also `comint-process-echoes'"
    "\\)"
    "$"))
 
+(defvar nodejs-repl-unary-operator-chars
+  '(?! ?+ ?-))
+(defvar nodejs-repl-unary-operator-words
+  '("void" "typeof" "delete"))
+
 (defvar nodejs-repl-cache-token "")
 (defvar nodejs-repl-cache-candidates ())
 
@@ -285,6 +290,29 @@ when receive the output string"
       (when (re-search-forward (concat nodejs-repl-prompt nodejs-repl-prompt) end t)
         (replace-match nodejs-repl-prompt)))))
 
+(defun nodejs-repl--beginning-of-sexp ()
+  (backward-sexp)
+  (while (and (not (bobp))
+              (or
+               (and (eq (char-syntax (char-after)) ?\()
+                    (save-excursion
+                      (search-backward-regexp "[[:graph:]]" nil t)
+                      (and (not (eq (char-after) ?\;))
+                           (not (equal (thing-at-point 'sexp t) "return")))))
+               (eq (char-before) ?.)
+               (save-excursion
+                 (backward-char)
+                 (equal (thing-at-point 'sexp t) "function"))))
+    (backward-sexp))
+  (let ((char-and-sexp (save-excursion
+                         (search-backward-regexp "[[:graph:]]" nil t)
+                         (cons (char-after) (thing-at-point 'sexp t)))))
+    (cond
+     ((member (car char-and-sexp) nodejs-repl-unary-operator-chars)
+      (search-backward-regexp "[[:graph:]]" nil t))
+     ((member (cdr char-and-sexp) nodejs-repl-unary-operator-words)
+      (backward-sexp))))
+  (point))
 
 ;;;--------------------------
 ;;; Public functions
@@ -323,8 +351,7 @@ when receive the output string"
 (defun nodejs-repl-send-last-sexp ()
   "Send the expression before point to the `nodejs-repl-process'"
   (interactive)
-  (nodejs-repl-send-region (save-excursion (backward-sexp)
-                             (point))
+  (nodejs-repl-send-region (save-excursion (nodejs-repl--beginning-of-sexp))
                            (point)))
 
 ;;;###autoload
