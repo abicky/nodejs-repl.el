@@ -89,5 +89,41 @@
     (setq nodejs-repl-prompt "node> ")
     (kill-process nodejs-repl-process-name)
     (nodejs-repl))
-  )
 
+  (desc "nodejs-repl--beginning-of-sexp")
+  (expect 6
+    (with-temp-buffer
+      (insert "bob; foo\n(bar)")
+      (nodejs-repl--beginning-of-sexp)
+      ))
+  (expect 11
+    (with-temp-buffer
+      (insert "bob; foo;\n(bar)")
+      (nodejs-repl--beginning-of-sexp)
+      ))
+  (expect 7
+    (with-temp-buffer
+      (insert "return(foo)")
+      (nodejs-repl--beginning-of-sexp)
+      ))
+  (expect 6
+    (with-temp-buffer
+      (insert "bob; function foo(a) { }")
+      (nodejs-repl--beginning-of-sexp)
+      ))
+  (expect 6
+    (with-temp-buffer
+      (insert "bob; (function foo(a) { })(1)")
+      (nodejs-repl--beginning-of-sexp)
+      ))
+  (expect 6
+    (with-temp-buffer
+      (insert "bob; !function foo(a) { }(1)")
+      (nodejs-repl--beginning-of-sexp)
+      ))
+  (expect 6
+    (with-temp-buffer
+      (insert "bob; void function foo(a) { }(1)")
+      (nodejs-repl--beginning-of-sexp)
+      ))
+  )
