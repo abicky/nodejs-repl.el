@@ -440,7 +440,8 @@ otherwise spawn one."
         (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
   (setq nodejs-repl-nodejs-version
         ;; "v7.3.0" => "7.3.0", "v7.x-dev" => "7"
-        (replace-regexp-in-string nodejs-repl--nodejs-version-re "\\1" (shell-command-to-string "node --version")))
+        (replace-regexp-in-string nodejs-repl--nodejs-version-re "\\1"
+                                  (shell-command-to-string (concat nodejs-repl-command " --version"))))
   (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
          (nodejs-repl-code (format nodejs-repl-code-format
                                    (window-width) nodejs-repl-prompt repl-mode )))
