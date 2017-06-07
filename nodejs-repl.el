@@ -152,7 +152,7 @@ See also `comint-process-echoes'"
 (defvar nodejs-repl-unary-operator-chars
   '(?! ?+ ?-))
 (defvar nodejs-repl-unary-operator-words
-  '("void" "typeof" "delete"))
+  '(void typeof delete))
 
 (defvar nodejs-repl-cache-token "")
 (defvar nodejs-repl-cache-candidates ())
@@ -298,15 +298,15 @@ when receive the output string"
                     (save-excursion
                       (search-backward-regexp "[[:graph:]]" nil t)
                       (and (not (eq (char-after) ?\;))
-                           (not (equal (thing-at-point 'sexp t) "return")))))
+                           (not (eq (sexp-at-point) 'return)))))
                (eq (char-before) ?.)
                (save-excursion
                  (backward-char)
-                 (equal (thing-at-point 'sexp t) "function"))))
+                 (eq (sexp-at-point) 'function))))
     (backward-sexp))
   (let ((char-and-sexp (save-excursion
                          (search-backward-regexp "[[:graph:]]" nil t)
-                         (cons (char-after) (thing-at-point 'sexp t)))))
+                         (cons (char-after) (sexp-at-point)))))
     (cond
      ((member (car char-and-sexp) nodejs-repl-unary-operator-chars)
       (search-backward-regexp "[[:graph:]]" nil t))
