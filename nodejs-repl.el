@@ -39,7 +39,7 @@
 ;;
 ;;     (add-hook 'js-mode-hook
 ;;               (lambda ()
-;;                 (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-sexp)
+;;                 (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-expression)
 ;;                 (define-key js-mode-map (kbd "C-c C-r") 'nodejs-repl-send-region)
 ;;                 (define-key js-mode-map (kbd "C-c C-l") 'nodejs-repl-load-file)
 ;;                 (define-key js-mode-map (kbd "C-c C-z") 'nodejs-repl-switch-to-repl)))
@@ -290,7 +290,7 @@ when receive the output string"
       (when (re-search-forward (concat nodejs-repl-prompt nodejs-repl-prompt) end t)
         (replace-match nodejs-repl-prompt)))))
 
-(defun nodejs-repl--beginning-of-sexp ()
+(defun nodejs-repl--beginning-of-expression ()
   (backward-sexp)
   (while (and (not (bobp))
               (or
@@ -348,11 +348,15 @@ when receive the output string"
     (comint-send-string proc (format ".load %s\n" file))))
 
 ;;;###autoload
-(defun nodejs-repl-send-last-sexp ()
+(defun nodejs-repl-send-last-expression ()
   "Send the expression before point to the `nodejs-repl-process'"
   (interactive)
-  (nodejs-repl-send-region (save-excursion (nodejs-repl--beginning-of-sexp))
+  (nodejs-repl-send-region (save-excursion (nodejs-repl--beginning-of-expression))
                            (point)))
+
+;;;###autoload
+(defun nodejs-repl-send-last-sexp () (interactive))  ;; Dummy definition for autoload
+(define-obsolete-function-alias 'nodejs-repl-send-last-sexp 'nodejs-repl-send-last-expression)
 
 ;;;###autoload
 (defun nodejs-repl-switch-to-repl ()
