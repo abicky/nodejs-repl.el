@@ -23,4 +23,4 @@ before_install:
   - cask
 
 script:
-  - make test
+  - travis_retry make test
