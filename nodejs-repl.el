@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2017  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: 0.1.4
+;; Version: 0.1.5
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-repl-version "0.1.4"
+(defconst nodejs-repl-version "0.1.5"
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
@@ -312,11 +312,15 @@ when receive the output string"
                         (search-backward-regexp "[[:graph:]]" nil t)
                         (and (not (eq (char-after) ?\;))  ; e.g. otherExp; (exp)
                              (not (eq (sexp-at-point) 'return)))))  ; e.g. return (exp)
-                 (eq (char-before) ?.)  ; e.g. obj.method
+                 (save-excursion
+                   (search-backward-regexp "[[:graph:]]" nil t)
+                   (eq (char-after) ?.))
                  (save-excursion
                    (backward-char)
                    (eq (sexp-at-point) 'function))))
       (search-backward-regexp "[[:graph:]]" nil t)
+      (when (eq (char-after) ?.)
+        (search-backward-regexp "[[:graph:]]" nil t))
       (forward-char)
       (nodejs-repl--backward-expression))
 
