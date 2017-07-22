@@ -291,7 +291,8 @@ when receive the output string"
 ;; cf. https://www.ecma-international.org/ecma-262/#sec-ecmascript-language-expressions
 (defun nodejs-repl--beginning-of-expression ()
   (search-backward-regexp "[[:graph:]]" nil t)
-  (forward-char)
+  (unless (eq (char-after) ?\;)
+    (forward-char))
   (cond
    ;; Allow function
    ((and (eq (char-before) ?})
