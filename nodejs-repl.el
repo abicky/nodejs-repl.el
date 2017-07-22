@@ -312,11 +312,15 @@ when receive the output string"
                         (search-backward-regexp "[[:graph:]]" nil t)
                         (and (not (eq (char-after) ?\;))  ; e.g. otherExp; (exp)
                              (not (eq (sexp-at-point) 'return)))))  ; e.g. return (exp)
-                 (eq (char-before) ?.)  ; e.g. obj.method
+                 (save-excursion
+                   (search-backward-regexp "[[:graph:]]" nil t)
+                   (eq (char-after) ?.))
                  (save-excursion
                    (backward-char)
                    (eq (sexp-at-point) 'function))))
       (search-backward-regexp "[[:graph:]]" nil t)
+      (when (eq (char-after) ?.)
+        (search-backward-regexp "[[:graph:]]" nil t))
       (forward-char)
       (nodejs-repl--backward-expression))
 

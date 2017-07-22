@@ -157,4 +157,16 @@
       (insert "bob; const foo = (x) => x ")
       (nodejs-repl--beginning-of-expression)
       ))
+  (expect 6
+    (with-temp-buffer
+      (js-mode)
+      (insert "bob; [1,2,3].map(function(number) { return number * 2 })")
+      (nodejs-repl--beginning-of-expression)
+      ))
+  (expect 6
+    (with-temp-buffer
+      (js-mode)
+      (insert "bob; [1,2,3] . map(function(number) { return number * 2 })")
+      (nodejs-repl--beginning-of-expression)
+      ))
   )
