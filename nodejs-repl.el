@@ -343,7 +343,7 @@ when receive the output string"
 ;;;###autoload
 (defun nodejs-repl-load-file (file)
   "Load the file to the `nodejs-repl-process'"
-  (interactive (list (read-file-name "Load file: " nil nil 'lambda)))
+  (interactive (list (expand-file-name (read-file-name "Load file: " nil nil 'lambda))))
   (let ((proc (nodejs-repl--get-or-create-process)))
     (comint-send-string proc (format ".load %s\n" file))))
 
