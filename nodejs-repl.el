@@ -356,6 +356,19 @@ when receive the output string"
   (nodejs-repl--send-string "\x15"))
 
 ;;;###autoload
+(defun nodejs-repl-send-line ()
+  "Send the current line to the `nodejs-repl-process'"
+  (interactive)
+  (save-excursion
+    (let ((proc (nodejs-repl--get-or-create-process))
+          (start))
+      (beginning-of-line)
+      (setq start (point))
+      (end-of-line)
+      (comint-send-region proc start (point))
+      (comint-send-string proc "\n"))))
+
+;;;###autoload
 (defun nodejs-repl-send-region (start end)
   "Send the current region to the `nodejs-repl-process'"
   (interactive "r")
