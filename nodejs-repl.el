@@ -149,10 +149,8 @@ See also `comint-process-echoes'"
    "\\)"
    "$"))
 
-(defvar nodejs-repl-unary-operator-chars
-  '(?! ?+ ?-))
-(defvar nodejs-repl-unary-operator-words
-  '(void typeof delete))
+(defvar nodejs-repl-unary-operators
+  '(! + - void typeof delete))
 
 (defvar nodejs-repl-cache-token "")
 (defvar nodejs-repl-cache-candidates ())
@@ -290,29 +288,56 @@ when receive the output string"
       (when (re-search-forward (concat nodejs-repl-prompt nodejs-repl-prompt) end t)
         (replace-match nodejs-repl-prompt)))))
 
+;; cf. https://www.ecma-international.org/ecma-262/#sec-ecmascript-language-expressions
 (defun nodejs-repl--beginning-of-expression ()
-  (backward-sexp)
-  (while (and (not (bobp))
-              (or
-               (and (eq (char-syntax (char-after)) ?\()
-                    (save-excursion
-                      (search-backward-regexp "[[:graph:]]" nil t)
-                      (and (not (eq (char-after) ?\;))
-                           (not (eq (sexp-at-point) 'return)))))
-               (eq (char-before) ?.)
-               (save-excursion
-                 (backward-char)
-                 (eq (sexp-at-point) 'function))))
-    (backward-sexp))
-  (let ((char-and-sexp (save-excursion
-                         (search-backward-regexp "[[:graph:]]" nil t)
-                         (cons (char-after) (sexp-at-point)))))
-    (cond
-     ((member (car char-and-sexp) nodejs-repl-unary-operator-chars)
-      (search-backward-regexp "[[:graph:]]" nil t))
-     ((member (cdr char-and-sexp) nodejs-repl-unary-operator-words)
-      (backward-sexp))))
+  (search-backward-regexp "[[:graph:]]" nil t)
+  (forward-char)
+  (cond
+   ;; Allow function
+   ((and (eq (char-before) ?})
+         (save-excursion
+           (backward-list)
+           (search-backward-regexp "[[:graph:]]" nil t)
+           (and (eq (char-before) ?=) (eq (char-after) ?>))))
+    (backward-list)
+    (search-backward-regexp "\\(\\w\\|)\\)\\s-*=>" nil t)
+    (forward-char)
+    (nodejs-repl--backward-expression))
+   (t
+    (nodejs-repl--backward-expression)
+    (while (and (not (bobp))
+                (or
+                 (and (eq (char-syntax (char-after)) ?\()
+                      (save-excursion
+                        (search-backward-regexp "[[:graph:]]" nil t)
+                        (and (not (eq (char-after) ?\;))  ; e.g. otherExp; (exp)
+                             (not (eq (sexp-at-point) 'return)))))  ; e.g. return (exp)
+                 (eq (char-before) ?.)  ; e.g. obj.method
+                 (save-excursion
+                   (backward-char)
+                   (eq (sexp-at-point) 'function))))
+      (search-backward-regexp "[[:graph:]]" nil t)
+      (forward-char)
+      (nodejs-repl--backward-expression))
+
+    ;; e.g. !function() {}()
+    (let ((exp (save-excursion
+                 (search-backward-regexp "[[:graph:]]" nil t)
+                 (or (sexp-at-point) (intern (char-to-string (char-after)))))))
+      (when (member exp nodejs-repl-unary-operators)
+       (search-backward (symbol-name exp) nil)))))
   (point))
+
+(defun nodejs-repl--backward-expression ()
+  (cond
+   ((eq (char-syntax (char-before)) ?\))
+    (backward-list))
+   ((save-excursion
+      (search-backward-regexp "[[:graph:]]" nil t)
+      (eq (char-syntax (char-after)) ?w))
+    (backward-sexp))
+   (t
+    (error "No proper expression is found backward"))))
 
 ;;;--------------------------
 ;;; Public functions
