@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2017  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: 0.1.5
+;; Version: 0.1.6
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-repl-version "0.1.5"
+(defconst nodejs-repl-version "0.1.6"
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
@@ -291,7 +291,8 @@ when receive the output string"
 ;; cf. https://www.ecma-international.org/ecma-262/#sec-ecmascript-language-expressions
 (defun nodejs-repl--beginning-of-expression ()
   (search-backward-regexp "[[:graph:]]" nil t)
-  (forward-char)
+  (unless (eq (char-after) ?\;)
+    (forward-char))
   (cond
    ;; Allow function
    ((and (eq (char-before) ?})
@@ -354,6 +355,19 @@ when receive the output string"
 (defun nodejs-repl-clear-line ()
   "Send ^U to Node.js process."
   (nodejs-repl--send-string "\x15"))
+
+;;;###autoload
+(defun nodejs-repl-send-line ()
+  "Send the current line to the `nodejs-repl-process'"
+  (interactive)
+  (save-excursion
+    (let ((proc (nodejs-repl--get-or-create-process))
+          (start))
+      (beginning-of-line)
+      (setq start (point))
+      (end-of-line)
+      (comint-send-region proc start (point))
+      (comint-send-string proc "\n"))))
 
 ;;;###autoload
 (defun nodejs-repl-send-region (start end)
