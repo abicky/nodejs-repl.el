@@ -374,8 +374,13 @@ when receive the output string"
   "Send the current region to the `nodejs-repl-process'"
   (interactive "r")
   (let ((proc (nodejs-repl--get-or-create-process)))
+    ;; Enclose the region in .editor ... EOF as this is more robust.
+    ;; See: https://github.com/abicky/nodejs-repl.el/issues/17
+    (comint-send-string proc ".editor\n")
     (comint-send-region proc start end)
-    (comint-send-string proc "\n")))
+    (comint-send-string proc "\n")
+    (with-current-buffer (process-buffer proc)
+      (comint-send-eof))))
 
 ;;;###autoload
 (defun nodejs-repl-send-buffer ()
