@@ -57,7 +57,10 @@
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
-  "Node.js command used in `nodejs-repl-mode'."
+  "Node.js command used in `nodejs-repl-mode'.  If it is a symbol
+of a function, the function is called for the path of the Node.js
+command.  This allows to integrate with a Node.js version manager
+such as nvm."
   :group 'nodejs-repl
   :type 'string)
 
@@ -490,19 +493,23 @@ otherwise spawn one."
 (defun nodejs-repl ()
   "Run Node.js REPL."
   (interactive)
-  (setq nodejs-repl-prompt-re
-        (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
-  (setq nodejs-repl-nodejs-version
-        ;; "v7.3.0" => "7.3.0", "v7.x-dev" => "7"
-        (replace-regexp-in-string nodejs-repl--nodejs-version-re "\\1"
-                                  (shell-command-to-string (concat nodejs-repl-command " --version"))))
-  (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
-         (nodejs-repl-code (format nodejs-repl-code-format
-                                   nodejs-repl-prompt repl-mode)))
-    (pop-to-buffer
-     (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
-            `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
-    (nodejs-repl-mode)))
+  (let ((node-command (if (and (symbolp nodejs-repl-command)
+                               (functionp nodejs-repl-command))
+                          (funcall nodejs-repl-command)
+                        nodejs-repl-command)))
+    (setq nodejs-repl-prompt-re
+          (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
+    (setq nodejs-repl-nodejs-version
+          ;; "v7.3.0" => "7.3.0", "v7.x-dev" => "7"
+          (replace-regexp-in-string nodejs-repl--nodejs-version-re "\\1"
+                                    (shell-command-to-string (concat node-command " --version"))))
+    (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
+           (nodejs-repl-code (format nodejs-repl-code-format
+                                     nodejs-repl-prompt repl-mode )))
+      (pop-to-buffer
+       (apply 'make-comint nodejs-repl-process-name node-command nil
+              `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
+      (nodejs-repl-mode))))
 
 (provide 'nodejs-repl)
 ;;; nodejs-repl.el ends here
