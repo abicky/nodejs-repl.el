@@ -110,14 +110,8 @@ See also `comint-process-echoes'"
     (define-key map (kbd "C-c C-c") 'nodejs-repl-quit-or-cancel)
     map))
 
-;; process.stdout.columns should be set.
-;; Node.js 0.8 and 0.10 uses this value as the maximum number of columns,
-;; but process.stdout.columns in Emacs is infinity because Emacs returns 0 as winsize.ws_col.
-;; The completion candidates won't be displayed if process.stdout.columns is infinity.
-;; see also `handleGroup` function in readline.js
 (defvar nodejs-repl-code-format
   (concat
-   "process.stdout.columns = %d;"
    "require('repl').start('%s', null, null, true, false, "
    "require('repl')['REPL_MODE_' + '%s'.toUpperCase()])"))
 
@@ -127,14 +121,7 @@ See also `comint-process-echoes'"
 
 ;;; if send string like "a; Ma\t", return a; Math\x1b[1G> a; Math\x1b[0K\x1b[10G
 (defvar nodejs-repl-prompt-re-format
-  (concat
-   "\x1b\\[1G"
-   "\\("
-   "\x1b\\[0J%s.*\x1b\\[[0-9]+G.*"  ; for Node.js 0.8
-   "\\|"
-   "%s.*\x1b\\[0K\x1b\\[[0-9]+G.*"  ; for Node.js 0.4 or 0.6
-   "\\)"
-   "$"))
+  "\x1b\\[1G\x1b\\[0J%s.*\x1b\\[[0-9]+G.*$")
 (defvar nodejs-repl-prompt-re
   (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
 ;;; not support Unicode characters
@@ -207,7 +194,6 @@ See also `comint-process-echoes'"
              (not
               (let ((last-line (process-get proc 'last-line)))
                 (or (string-match-p nodejs-repl-prompt-re last-line)
-                    (string-match-p "^\x1b[[0-9]+D$" last-line)  ; for Node.js 0.8
                     (string= last-line string)))))
     (process-put proc 'running-p nil)
     (accept-process-output proc interval)))
@@ -461,9 +447,7 @@ otherwise spawn one."
              (string-match-p (concat "^" nodejs-repl-cache-token) token)
              (not (string-match-p (concat "^" nodejs-repl-cache-token ".*?[.(/'\"]") token)))
         (setq candidates nodejs-repl-cache-candidates)
-      (if (equal token "require(")  ; a bug occurs when press TAB after "require(" in node 0.6
-          (setq candidates nil)
-        (setq candidates (nodejs-repl--get-candidates-from-process token)))
+      (setq candidates (nodejs-repl--get-candidates-from-process token))
       (setq nodejs-repl-cache-token token)
       (setq nodejs-repl-cache-candidates candidates))
     candidates))
@@ -496,7 +480,7 @@ otherwise spawn one."
                                   (shell-command-to-string (concat nodejs-repl-command " --version"))))
   (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
          (nodejs-repl-code (format nodejs-repl-code-format
-                                   (window-width) nodejs-repl-prompt repl-mode )))
+                                   nodejs-repl-prompt repl-mode)))
     (pop-to-buffer
      (apply 'make-comint nodejs-repl-process-name nodejs-repl-command nil
             `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
