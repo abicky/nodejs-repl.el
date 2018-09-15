@@ -106,7 +106,7 @@ See also `comint-process-echoes'"
 
 (defvar nodejs-repl-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "TAB") 'comint-dynamic-complete)
+    (define-key map (kbd "TAB") 'completion-at-point)
     (define-key map (kbd "C-c C-c") 'nodejs-repl-quit-or-cancel)
     map))
 
@@ -140,8 +140,9 @@ See also `comint-process-echoes'"
   '(! + - void typeof delete))
 
 (defvar nodejs-repl-cache-token "")
-(defvar nodejs-repl-cache-candidates ())
+(defvar nodejs-repl-cache-completions ())
 
+(defvar nodejs-repl-get-completions-for-require-p nil)
 
 ;;;--------------------------
 ;;; Private functions
@@ -207,13 +208,13 @@ when receive the output string"
     (goto-char (point-max))
     (process-put proc 'last-line (buffer-substring (point-at-bol) (point)))))
 
-(defun nodejs-repl--get-candidates-from-process (token)
-  "Get completion candidates sending TAB to Node.js process."
+(defun nodejs-repl--get-completions-from-process (token)
+  "Get completions sending TAB to Node.js process."
   (let ((ret (if (version< nodejs-repl-nodejs-version "7.0.0")
                  (nodejs-repl--send-string (concat token "\t"))
                (nodejs-repl--send-string (concat token "\t"))
                (nodejs-repl--send-string "\t")))
-        candidates)
+        completions)
     (nodejs-repl-clear-line)
     (when (not (equal ret token))
       (if (string-match-p "\n" ret)
@@ -225,21 +226,21 @@ when receive the output string"
             ;; trim trailing whitespaces
             (setq ret (replace-regexp-in-string "[ \t\r\n]*\\'" "" ret))
             ;; don't split by whitespaces because the prompt might have whitespaces!!
-            (setq candidates (split-string ret "\n"))
+            (setq completions (split-string ret "\n"))
             ;; remove the first element (input) and the last element (prompt)
-            (setq candidates (reverse (cdr (reverse (cdr candidates)))))
+            (setq completions (reverse (cdr (reverse (cdr completions)))))
             ;; split by whitespaces
             ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
-            (setq candidates (split-string
-                              (replace-regexp-in-string " *$" "" (mapconcat 'identity candidates " "))
+            (setq completions (split-string
+                              (replace-regexp-in-string " *$" "" (mapconcat 'identity completions " "))
                               "[ \t\r\n]+"))
 )
           (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
           (let ((candidate-token (nodejs-repl--get-last-token ret)))
-            (setq candidates (if (or (null candidate-token) (equal candidate-token token))
+            (setq completions (if (or (null candidate-token) (equal candidate-token token))
                                  nil
                                (list candidate-token))))))
-    candidates))
+    completions))
 
 (defun nodejs-repl--get-or-create-process ()
   (let ((proc (get-process nodejs-repl-process-name)))
@@ -262,7 +263,7 @@ when receive the output string"
 (defun nodejs-repl--clear-cache (string)
   "Clear caches when outputting the result."
   (setq nodejs-repl-cache-token "")
-  (setq nodejs-repl-cache-candidates ()))
+  (setq nodejs-repl-cache-completions ()))
 
 (defun nodejs-repl--remove-duplicated-prompt (string)
   ;; `.load` command of Node.js repl outputs a duplicated prompt
@@ -329,6 +330,50 @@ when receive the output string"
     (backward-sexp))
    (t
     (error "No proper expression is found backward"))))
+
+(defun nodejs-repl--completion-at-point-function ()
+  (when (comint-after-pmark-p)
+    (let* ((input (buffer-substring (comint-line-beginning-position) (point)))
+           require-arg
+           token-length
+           file-completion-p)
+      (setq nodejs-repl-get-completions-for-require-p nil)  ;; reset
+      (if (not (nodejs-repl--in-string-p))
+          (setq token-length (length (nodejs-repl--get-last-token input)))
+        (setq require-arg (nodejs-repl--extract-require-argument input)
+              nodejs-repl-get-completions-for-require-p t)
+        (if (and require-arg
+                 (or (= (length require-arg) 1)  ; only quote or double quote
+                     (not (string-match-p "[./]" (substring require-arg 1 2)))))  ; not file path
+            (setq token-length (1- (length require-arg)))
+          (let ((quote-pos (save-excursion
+                             (search-backward-regexp "['\"]" (point-at-bol) t)
+                             (forward-char)
+                             (point))))
+            (when quote-pos
+              (setq file-completion-p t
+                    token-length (- (point) quote-pos))))))
+      (when token-length
+        (list
+         (save-excursion (backward-char token-length) (point))
+         (point)
+         (if file-completion-p
+             #'completion-file-name-table
+           (completion-table-dynamic #'nodejs-repl--get-completions)))))))
+
+(defun nodejs-repl--get-completions (token)
+  (let (completions)
+    (when nodejs-repl-get-completions-for-require-p
+      (setq token (concat "require('" token)))
+    (if (and (not (equal nodejs-repl-cache-token ""))
+             (string-prefix-p nodejs-repl-cache-token token)
+             (not (string-match-p (concat "^" nodejs-repl-cache-token ".*?[.(/'\"]") token)))
+        (setq completions nodejs-repl-cache-completions)
+      (setq completions (nodejs-repl--get-completions-from-process token)
+            nodejs-repl-cache-token token
+            nodejs-repl-cache-completions completions))
+    completions))
+
 
 ;;;--------------------------
 ;;; Public functions
@@ -414,45 +459,6 @@ otherwise spawn one."
       (goto-char (point-max))
       (delete-region (point-at-bol) (point)))))
 
-(defun nodejs-repl-complete-from-process ()
-  "Dynamically complete tokens at the point."
-  (when (comint-after-pmark-p)
-    (let* ((input (buffer-substring (comint-line-beginning-position) (point)))
-           require-arg
-           token
-           candidates
-           ret)
-      (if (nodejs-repl--in-string-p)
-          (progn
-            (setq require-arg (nodejs-repl--extract-require-argument input))
-            (if (and require-arg
-                     (or (= (length require-arg) 1)
-                         (not (string-match-p "[./]" (substring require-arg 1 2)))))
-                (setq token (concat "require(" require-arg))
-              (setq ret (comint-dynamic-complete-as-filename))))
-        (setq token (nodejs-repl--get-last-token input)))
-      (when token
-        (setq candidates (nodejs-repl-get-candidates token))
-        ;; TODO: write unit test
-        (setq token (replace-regexp-in-string "^require(['\"]" "" token))
-        (setq ret (comint-dynamic-simple-complete token candidates)))
-      (if (eq ret 'sole)
-          (delete-char -1))
-      ret)))
-
-(defun nodejs-repl-get-candidates (token)
-  "Get completion candidates."
-  (let (candidates)
-    (if (and (not (equal nodejs-repl-cache-token ""))
-             (string-match-p (concat "^" nodejs-repl-cache-token) token)
-             (not (string-match-p (concat "^" nodejs-repl-cache-token ".*?[.(/'\"]") token)))
-        (setq candidates nodejs-repl-cache-candidates)
-      (setq candidates (nodejs-repl--get-candidates-from-process token))
-      (setq nodejs-repl-cache-token token)
-      (setq nodejs-repl-cache-candidates candidates))
-    candidates))
-
-
 (define-derived-mode nodejs-repl-mode comint-mode "Node.js REPL"
   "Major mode for Node.js REPL"
   :syntax-table nodejs-repl-mode-syntax-table
@@ -462,10 +468,7 @@ otherwise spawn one."
   (add-hook 'comint-output-filter-functions 'nodejs-repl--clear-cache nil t)
   (setq comint-input-ignoredups nodejs-repl-input-ignoredups)
   (setq comint-process-echoes nodejs-repl-process-echoes)
-  ;; delq seems to change global variables if called this phase
-  (set (make-local-variable 'comint-dynamic-complete-functions)
-       (delete 'comint-dynamic-complete-filename comint-dynamic-complete-functions))
-  (add-hook 'comint-dynamic-complete-functions 'nodejs-repl-complete-from-process nil t)
+  (add-hook 'completion-at-point-functions 'nodejs-repl--completion-at-point-function nil t)
   (ansi-color-for-comint-mode-on))
 
 ;;;###autoload
