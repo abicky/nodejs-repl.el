@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2017  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: 0.1.6
+;; Version: 0.1.7
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-repl-version "0.1.6"
+(defconst nodejs-repl-version "0.1.7"
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
@@ -374,8 +374,13 @@ when receive the output string"
   "Send the current region to the `nodejs-repl-process'"
   (interactive "r")
   (let ((proc (nodejs-repl--get-or-create-process)))
+    ;; Enclose the region in .editor ... EOF as this is more robust.
+    ;; See: https://github.com/abicky/nodejs-repl.el/issues/17
+    (comint-send-string proc ".editor\n")
     (comint-send-region proc start end)
-    (comint-send-string proc "\n")))
+    (comint-send-string proc "\n")
+    (with-current-buffer (process-buffer proc)
+      (comint-send-eof))))
 
 ;;;###autoload
 (defun nodejs-repl-send-buffer ()
