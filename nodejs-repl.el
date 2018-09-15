@@ -143,6 +143,7 @@ See also `comint-process-echoes'"
 (defvar nodejs-repl-cache-completions ())
 
 (defvar nodejs-repl-get-completions-for-require-p nil)
+(defvar nodejs-repl-completion-at-point-called-p nil)
 
 ;;;--------------------------
 ;;; Private functions
@@ -275,6 +276,18 @@ when receive the output string"
       (when (re-search-forward (concat nodejs-repl-prompt nodejs-repl-prompt) end t)
         (replace-match nodejs-repl-prompt)))))
 
+(defun nodejs-repl--remove-unexpected-prompts (string)
+  ;; Unexpected prompts are inserted if `completion-auto-help' is t
+  (when nodejs-repl-completion-at-point-called-p
+    (setq nodejs-repl-completion-at-point-called-p nil)
+    (let ((beg (or comint-last-output-start
+                   (point-min-marker)))
+          (end (process-mark (get-buffer-process (current-buffer)))))
+      (save-excursion
+        (goto-char beg)
+        (when (re-search-forward nodejs-repl-prompt end t)
+          (replace-match ""))))))
+
 ;; cf. https://www.ecma-international.org/ecma-262/#sec-ecmascript-language-expressions
 (defun nodejs-repl--beginning-of-expression ()
   (search-backward-regexp "[[:graph:]]" nil t)
@@ -332,6 +345,7 @@ when receive the output string"
     (error "No proper expression is found backward"))))
 
 (defun nodejs-repl--completion-at-point-function ()
+  (setq nodejs-repl-completion-at-point-called-p t)
   (when (comint-after-pmark-p)
     (let* ((input (buffer-substring (comint-line-beginning-position) (point)))
            require-arg
@@ -463,6 +477,7 @@ otherwise spawn one."
   "Major mode for Node.js REPL"
   :syntax-table nodejs-repl-mode-syntax-table
   (set (make-local-variable 'font-lock-defaults) '(nil nil t))
+  (add-hook 'comint-output-filter-functions 'nodejs-repl--remove-unexpected-prompts nil t)
   (add-hook 'comint-output-filter-functions 'nodejs-repl--remove-duplicated-prompt nil t)
   (add-hook 'comint-output-filter-functions 'nodejs-repl--filter-escape-sequnces nil t)
   (add-hook 'comint-output-filter-functions 'nodejs-repl--clear-cache nil t)
