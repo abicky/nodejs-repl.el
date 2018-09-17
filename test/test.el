@@ -46,31 +46,36 @@
       ;; node 0.6.17 outputs "undefined"
       (string-match-p "a\n\nb\n\\(undefined\\)?" (buffer-string))))
 
-  (desc "nodejs-repl-get-candidates")
+  (desc "nodejs-repl--get-completions")
   (expect '("Error")
-    (delete-dups (nodejs-repl-get-candidates "Err")))
+    (delete-dups (nodejs-repl--get-completions "Err")))
   (expect '("Error")
-    (delete-dups (nodejs-repl-get-candidates "Erro")))
+    (delete-dups (nodejs-repl--get-completions "Erro")))
   (expect "Err"  ; use cache?
     nodejs-repl-cache-token)
   (expect '("Math.max" "Math.min")
-    (nodejs-repl-get-candidates "Math.m"))
+    (nodejs-repl--get-completions "Math.m"))
   ;; FIXME: this test is meaningless if window width is not set
   (expect '("encodeURI" "encodeURIComponent")
-    (delete-dups (nodejs-repl-get-candidates "encode")))
+    (delete-dups (nodejs-repl--get-completions "encode")))
 
-  (desc "nodejs-repl-get-candidates for require")
+  (desc "nodejs-repl--get-completions for require")
   (expect nil
-    (nodejs-repl-get-candidates "foo"))
+    (nodejs-repl--get-completions "foo"))
   (expect '("require")
-    (nodejs-repl-get-candidates "requi"))
+    (nodejs-repl--get-completions "requi"))
   (expect t
-    (nodejs-repl-get-candidates "require(")  ; update cache
-    (> (length (nodejs-repl-get-candidates "require(\"")) 1))
-  (expect "require(\""  ; update cache?
+    (> (length (let ((nodejs-repl-get-completions-for-require-p t))
+                 (nodejs-repl--get-completions ""))) 1))
+  (expect "require('"  ; update cache?
     nodejs-repl-cache-token)
-  (expect "require(\"npm/"  ; update cache?
-    (nodejs-repl-get-candidates "require(\"npm/")
+  (expect "require('"  ; use cache?
+    (let ((nodejs-repl-get-completions-for-require-p t))
+      (nodejs-repl--get-completions "f"))
+    nodejs-repl-cache-token)
+  (expect "require('npm/"  ; update cache?
+    (let ((nodejs-repl-get-completions-for-require-p t))
+      (nodejs-repl--get-completions "npm/"))
     nodejs-repl-cache-token)
 
   (desc "nodejs-repl--extract-require-argument")
