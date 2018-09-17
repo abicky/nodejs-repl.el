@@ -454,10 +454,6 @@ when receive the output string"
                            (point)))
 
 ;;;###autoload
-(defun nodejs-repl-send-last-sexp () (interactive))  ;; Dummy definition for autoload
-(define-obsolete-function-alias 'nodejs-repl-send-last-sexp 'nodejs-repl-send-last-expression)
-
-;;;###autoload
 (defun nodejs-repl-switch-to-repl ()
   "If there is a `nodejs-repl-process' running switch to it,
 otherwise spawn one."
