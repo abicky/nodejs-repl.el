@@ -423,6 +423,26 @@ when receive the output string"
   (interactive)
   (process-send-string (get-process nodejs-repl-process-name) "\x03"))
 
+(defun nodejs-repl-restart ()
+  "restart the nodejs REPL"
+  (interactive)
+  (defvar nodejs-repl-code
+    (concat "process.stdout.columns = %d;" "require('repl').start('%s', null, null, true, false)"))
+  (with-current-buffer "*nodejs*"
+    (kill-process nil comint-ptyp)
+    (run-with-timer 0.01 nil (lambda ()
+			       (setq nodejs-repl-prompt-re
+				     (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
+		      (with-current-buffer "*nodejs*"
+			(apply 'make-comint
+			       nodejs-repl-process-name
+			       nodejs-repl-command
+			       nil
+			       `("-e" ,(format nodejs-repl-code (window-width) nodejs-repl-prompt)))
+			(nodejs-repl-mode)
+			(erase-buffer))))))
+
+
 (defun nodejs-repl-clear-line ()
   "Send ^U to Node.js process."
   (nodejs-repl--send-string "\x15"))
