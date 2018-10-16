@@ -94,6 +94,10 @@ such as nvm."
   :group 'nodejs-repl
   :type 'string)
 
+(defcustom nodejs-repl-use-global "false"
+  "useGlobal option of Node.js REPL method repl.start"
+  :group 'nodejs-repl
+  :type 'string)
 
 (defcustom nodejs-repl-input-ignoredups t
   "If non-nil, don't add input matching the last on the input ring.
@@ -135,7 +139,7 @@ See also `comint-process-echoes'"
 
 (defvar nodejs-repl-code-format
   (concat
-   "require('repl').start('%s', null, null, true, false, "
+   "require('repl').start({prompt: '%s', useGlobal: %s}, null, null, true, false, "
    "require('repl')['REPL_MODE_' + '%s'.toUpperCase()])"))
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
@@ -423,26 +427,6 @@ when receive the output string"
   (interactive)
   (process-send-string (get-process nodejs-repl-process-name) "\x03"))
 
-(defun nodejs-repl-restart ()
-  "restart the nodejs REPL"
-  (interactive)
-  (defvar nodejs-repl-code
-    (concat "process.stdout.columns = %d;" "require('repl').start('%s', null, null, true, false)"))
-  (with-current-buffer "*nodejs*"
-    (kill-process nil comint-ptyp)
-    (run-with-timer 0.01 nil (lambda ()
-			       (setq nodejs-repl-prompt-re
-				     (format nodejs-repl-prompt-re-format nodejs-repl-prompt nodejs-repl-prompt))
-		      (with-current-buffer "*nodejs*"
-			(apply 'make-comint
-			       nodejs-repl-process-name
-			       nodejs-repl-command
-			       nil
-			       `("-e" ,(format nodejs-repl-code (window-width) nodejs-repl-prompt)))
-			(nodejs-repl-mode)
-			(erase-buffer))))))
-
-
 (defun nodejs-repl-clear-line ()
   "Send ^U to Node.js process."
   (nodejs-repl--send-string "\x15"))
@@ -546,7 +530,7 @@ otherwise spawn one."
                                     (shell-command-to-string (concat node-command " --version"))))
     (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
            (nodejs-repl-code (format nodejs-repl-code-format
-                                     nodejs-repl-prompt repl-mode )))
+                                     nodejs-repl-prompt nodejs-repl-use-global repl-mode)))
       (pop-to-buffer
        (apply 'make-comint nodejs-repl-process-name node-command nil
               `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
