@@ -94,6 +94,10 @@ such as nvm."
   :group 'nodejs-repl
   :type 'string)
 
+(defcustom nodejs-repl-use-global "false"
+  "useGlobal option of Node.js REPL method repl.start"
+  :group 'nodejs-repl
+  :type 'string)
 
 (defcustom nodejs-repl-input-ignoredups t
   "If non-nil, don't add input matching the last on the input ring.
@@ -135,8 +139,8 @@ See also `comint-process-echoes'"
 
 (defvar nodejs-repl-code-format
   (concat
-   "require('repl').start('%s', null, null, true, false, "
-   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()])"))
+   "require('repl').start({prompt: '%s', useGlobal: %s, replMode: "
+   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()] })"))
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 
@@ -526,7 +530,7 @@ otherwise spawn one."
                                     (shell-command-to-string (concat node-command " --version"))))
     (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
            (nodejs-repl-code (format nodejs-repl-code-format
-                                     nodejs-repl-prompt repl-mode )))
+                                     nodejs-repl-prompt nodejs-repl-use-global repl-mode)))
       (pop-to-buffer
        (apply 'make-comint nodejs-repl-process-name node-command nil
               `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
