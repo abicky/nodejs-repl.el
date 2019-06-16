@@ -260,14 +260,14 @@ when receive the output string"
             ;; split by whitespaces
             ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
             (setq completions (split-string
-                              (replace-regexp-in-string " *$" "" (mapconcat 'identity completions " "))
-                              "[ \t\r\n]+"))
-)
-          (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
-          (let ((candidate-token (nodejs-repl--get-last-token ret)))
-            (setq completions (if (or (null candidate-token) (equal candidate-token token))
-                                 nil
-                               (list candidate-token))))))
+                               (replace-regexp-in-string " *$" "" (mapconcat 'identity completions " "))
+                               "[ \t\r\n]+"))
+            )
+        (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
+        (let ((candidate-token (nodejs-repl--get-last-token ret)))
+          (setq completions (if (or (null candidate-token) (equal candidate-token token))
+                                nil
+                              (list candidate-token))))))
     completions))
 
 (defun nodejs-repl--get-or-create-process ()
