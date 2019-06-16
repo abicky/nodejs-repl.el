@@ -1,6 +1,5 @@
 language: node_js
 node_js:
-  - 6
   - 8
   - 10
   - 12
@@ -12,17 +11,6 @@ env:
   - EVM_EMACS=emacs-25.3-travis
   - EVM_EMACS=emacs-26.1-travis
   - EVM_EMACS=emacs-26.2-travis
-
-matrix:
-  exclude:
-  - node_js: 6
-    env: EVM_EMACS=emacs-25.1-travis
-  - node_js: 6
-    env: EVM_EMACS=emacs-25.2-travis
-  - node_js: 6
-    env: EVM_EMACS=emacs-25.3-travis
-  - node_js: 6
-    env: EVM_EMACS=emacs-26.1-travis
 
 before_install:
   - curl -fsSkL https://gist.github.com/rejeep/ebcd57c3af83b049833b/raw > x.sh && source ./x.sh

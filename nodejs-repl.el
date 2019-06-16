@@ -238,8 +238,8 @@ when receive the output string"
 
 (defun nodejs-repl--get-completions-from-process (token)
   "Get completions sending TAB to Node.js process."
-  (let ((ret (if (version< nodejs-repl-nodejs-version "7.0.0")
-                 (nodejs-repl--send-string (concat token "\t"))
+  (let ((ret (progn
+               ;; Send TAB twice cf. https://github.com/nodejs/node/pull/7754
                (nodejs-repl--send-string (concat token "\t"))
                (nodejs-repl--send-string "\t")))
         completions)
