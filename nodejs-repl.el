@@ -238,8 +238,8 @@ when receive the output string"
 
 (defun nodejs-repl--get-completions-from-process (token)
   "Get completions sending TAB to Node.js process."
-  (let ((ret (if (version< nodejs-repl-nodejs-version "7.0.0")
-                 (nodejs-repl--send-string (concat token "\t"))
+  (let ((ret (progn
+               ;; Send TAB twice cf. https://github.com/nodejs/node/pull/7754
                (nodejs-repl--send-string (concat token "\t"))
                (nodejs-repl--send-string "\t")))
         completions)
@@ -532,8 +532,10 @@ otherwise spawn one."
            (nodejs-repl-code (format nodejs-repl-code-format
                                      nodejs-repl-prompt nodejs-repl-use-global repl-mode)))
       (pop-to-buffer
-       (apply 'make-comint nodejs-repl-process-name node-command nil
-              `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
+       ;; Node.js 12 ignores almost all keys if TERM is "dumb"
+       ;; cf. https://github.com/nodejs/node/commit/d3a62fe7fc683bf74b3e9c743f73471f0167bd15
+       (apply 'make-comint nodejs-repl-process-name "env" nil
+              `("TERM=xterm" ,node-command ,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
       (nodejs-repl-mode))))
 
 (provide 'nodejs-repl)
