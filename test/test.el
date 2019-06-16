@@ -27,13 +27,13 @@
        (eq orig-marker (marker-position (process-mark proc)))
        (eq orig-filter (process-filter proc))
        (eq orig-buf (process-buffer proc)))))
-  (expect "100000000"  ; waits for finishing commands
-          (let ((ret (nodejs-repl--send-string "for (i = 0; i < 100000000; i++) {} console.log(i)\n")))
-            (nth 1 (split-string ret "\r\n"))))
-  ;; TODO
-  ;; (expect "100000000"  ; waits for finishing commands
-  ;;   (let ((ret (nodejs-repl-send-string "for (i = 0; i < 20000000; i++) if (!(i % 10000000))process.stdout.write(\"\"+i)\n")))
-  ;;           (nth 1 (split-string ret "\r\n"))))
+  (expect '("2" "undefined")  ; waits for finishing commands
+    (let* ((ret (nodejs-repl--send-string "s = Date.now(); while ((d = (Date.now() - s) / 1000 | 0) < 2); console.log(d)\n"))
+           (i-value (nth 1 (split-string ret "\r\n")))
+           (return-value (nth 2 (split-string ret "\r\n"))))
+      (list
+       (ansi-color-filter-apply i-value)
+       (ansi-color-filter-apply return-value))))
 
   (desc "nodejs-repl-execute")
   (expect "2\n"

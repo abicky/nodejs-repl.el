@@ -1,9 +1,9 @@
 ;;; nodejs-repl.el --- Run Node.js REPL
 
-;; Copyright (C) 2012-2017  Takeshi Arabiki
+;; Copyright (C) 2012-2019  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: 0.2.1
+;; Version: 0.2.2
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -73,7 +73,7 @@
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-repl-version "0.2.1"
+(defconst nodejs-repl-version "0.2.2"
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
@@ -238,8 +238,8 @@ when receive the output string"
 
 (defun nodejs-repl--get-completions-from-process (token)
   "Get completions sending TAB to Node.js process."
-  (let ((ret (if (version< nodejs-repl-nodejs-version "7.0.0")
-                 (nodejs-repl--send-string (concat token "\t"))
+  (let ((ret (progn
+               ;; Send TAB twice cf. https://github.com/nodejs/node/pull/7754
                (nodejs-repl--send-string (concat token "\t"))
                (nodejs-repl--send-string "\t")))
         completions)
@@ -260,14 +260,14 @@ when receive the output string"
             ;; split by whitespaces
             ;; '("encodeURI     encodeURIComponent") -> '("encodeURI" "encodeURIComponent")
             (setq completions (split-string
-                              (replace-regexp-in-string " *$" "" (mapconcat 'identity completions " "))
-                              "[ \t\r\n]+"))
-)
-          (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
-          (let ((candidate-token (nodejs-repl--get-last-token ret)))
-            (setq completions (if (or (null candidate-token) (equal candidate-token token))
-                                 nil
-                               (list candidate-token))))))
+                               (replace-regexp-in-string " *$" "" (mapconcat 'identity completions " "))
+                               "[ \t\r\n]+"))
+            )
+        (setq ret (replace-regexp-in-string nodejs-repl-extra-espace-sequence-re "" ret))
+        (let ((candidate-token (nodejs-repl--get-last-token ret)))
+          (setq completions (if (or (null candidate-token) (equal candidate-token token))
+                                nil
+                              (list candidate-token))))))
     completions))
 
 (defun nodejs-repl--get-or-create-process ()
@@ -307,7 +307,7 @@ when receive the output string"
         (replace-match nodejs-repl-prompt)))))
 
 (defun nodejs-repl--delete-prompt (string)
-  ;; A prompt will be inserted if window--adjust-process-windows is called
+  ;; Redundant prompts are included in outputs from Node.js REPL
   (when nodejs-repl-prompt-deletion-required-p
     (setq nodejs-repl-prompt-deletion-required-p nil)
     (let ((beg (or comint-last-output-start
@@ -315,7 +315,9 @@ when receive the output string"
           (end (process-mark (get-buffer-process (current-buffer)))))
       (save-excursion
         (goto-char beg)
-        (when (re-search-forward nodejs-repl-prompt end t)
+        (forward-line 0) ; Use forward-line instead of beginning-of-line to ignore prompts
+        (forward-char (length nodejs-repl-prompt))
+        (while (re-search-forward nodejs-repl-prompt end t)
           (replace-match ""))))))
 
 ;; cf. https://www.ecma-international.org/ecma-262/#sec-ecmascript-language-expressions
@@ -375,7 +377,7 @@ when receive the output string"
     (error "No proper expression is found backward"))))
 
 (defun nodejs-repl--completion-at-point-function ()
-  (setq nodejs-repl-completion-at-point-called-p t)
+  (setq nodejs-repl-prompt-deletion-required-p t)
   (when (comint-after-pmark-p)
     (let* ((input (buffer-substring (comint-line-beginning-position) (point)))
            require-arg
@@ -532,8 +534,10 @@ otherwise spawn one."
            (nodejs-repl-code (format nodejs-repl-code-format
                                      nodejs-repl-prompt nodejs-repl-use-global repl-mode)))
       (pop-to-buffer
-       (apply 'make-comint nodejs-repl-process-name node-command nil
-              `(,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
+       ;; Node.js 12 ignores almost all keys if TERM is "dumb"
+       ;; cf. https://github.com/nodejs/node/commit/d3a62fe7fc683bf74b3e9c743f73471f0167bd15
+       (apply 'make-comint nodejs-repl-process-name "env" nil
+              `("TERM=xterm" ,node-command ,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
       (nodejs-repl-mode))))
 
 (provide 'nodejs-repl)
