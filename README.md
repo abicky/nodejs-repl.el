@@ -1,6 +1,8 @@
 nodejs-repl.el
 ===================================
 
+![](https://github.com/abicky/nodejs-repl.el/workflows/CI/badge.svg)
+
 Run Node.js REPL in Emacs
 
 Description
