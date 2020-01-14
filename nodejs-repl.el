@@ -140,7 +140,7 @@ See also `comint-process-echoes'"
 (defvar nodejs-repl-code-format
   (concat
    "require('repl').start({prompt: '%s', useGlobal: %s, replMode: "
-   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()] })"))
+   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()], preview: false})"))
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 
