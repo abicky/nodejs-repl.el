@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2019  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: 0.2.2
+;; Version: 0.2.3
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -73,7 +73,7 @@
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-repl-version "0.2.2"
+(defconst nodejs-repl-version "0.2.3"
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
@@ -140,7 +140,7 @@ See also `comint-process-echoes'"
 (defvar nodejs-repl-code-format
   (concat
    "require('repl').start({prompt: '%s', useGlobal: %s, replMode: "
-   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()] })"))
+   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()], preview: false})"))
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 
