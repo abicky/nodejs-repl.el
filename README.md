@@ -1,6 +1,8 @@
 nodejs-repl.el
 ===================================
 
+![](https://github.com/abicky/nodejs-repl.el/workflows/CI/badge.svg)
+
 Run Node.js REPL in Emacs
 
 Description
@@ -71,7 +73,7 @@ Takeshi Arabiki (abicky)
 Copyright and License
 ---------------------
 
-Copyright (C) 2012-2018  Takeshi Arabiki (abicky)
+Copyright (C) 2012-2020  Takeshi Arabiki (abicky)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
