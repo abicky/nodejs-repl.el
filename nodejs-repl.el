@@ -94,7 +94,7 @@ such as nvm."
   :group 'nodejs-repl
   :type 'string)
 
-(defcustom nodejs-repl-use-global "false"
+(defcustom nodejs-repl-use-global "true"
   "useGlobal option of Node.js REPL method repl.start"
   :group 'nodejs-repl
   :type 'string)
@@ -140,7 +140,7 @@ See also `comint-process-echoes'"
 (defvar nodejs-repl-code-format
   (concat
    "require('repl').start({prompt: '%s', useGlobal: %s, replMode: "
-   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()] })"))
+   "require('repl')['REPL_MODE_' + '%s'.toUpperCase()], preview: false})"))
 
 (defvar nodejs-repl-extra-espace-sequence-re "\\(\x1b\\[[0-9]+[GJK]\\)")
 
@@ -530,7 +530,7 @@ otherwise spawn one."
           ;; "v7.3.0" => "7.3.0", "v7.x-dev" => "7"
           (replace-regexp-in-string nodejs-repl--nodejs-version-re "\\1"
                                     (shell-command-to-string (concat node-command " --version"))))
-    (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "magic"))
+    (let* ((repl-mode (or (getenv "NODE_REPL_MODE") "sloppy"))
            (nodejs-repl-code (format nodejs-repl-code-format
                                      nodejs-repl-prompt nodejs-repl-use-global repl-mode)))
       (pop-to-buffer
