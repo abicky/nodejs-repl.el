@@ -94,7 +94,7 @@ such as nvm."
   :group 'nodejs-repl
   :type 'string)
 
-(defcustom nodejs-repl-use-global "false"
+(defcustom nodejs-repl-use-global "true"
   "useGlobal option of Node.js REPL method repl.start"
   :group 'nodejs-repl
   :type 'string)
