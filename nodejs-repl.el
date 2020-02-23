@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2020  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: 0.2.3
+;; Version: 0.2.4
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -22,9 +22,10 @@
 ;;
 ;; This program is derived from comint-mode and provides the following features.
 ;;
-;;  * TAB completion same as Node.js REPL
+;;  * token completion, same as Node.js REPL
 ;;  * file name completion in string
 ;;  * incremental history search
+;;  * sending JavaScript codes to REPL
 ;;
 ;;
 ;; Put this file in your Emacs lisp path (e.g. ~/.emacs.d/site-lisp)
@@ -40,6 +41,7 @@
 ;;     (add-hook 'js-mode-hook
 ;;               (lambda ()
 ;;                 (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-expression)
+;;                 (define-key js-mode-map (kbd "C-c C-j") 'nodejs-repl-send-line)
 ;;                 (define-key js-mode-map (kbd "C-c C-r") 'nodejs-repl-send-region)
 ;;                 (define-key js-mode-map (kbd "C-c C-l") 'nodejs-repl-load-file)
 ;;                 (define-key js-mode-map (kbd "C-c C-z") 'nodejs-repl-switch-to-repl)))
@@ -73,7 +75,7 @@
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-repl-version "0.2.3"
+(defconst nodejs-repl-version "0.2.4"
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
