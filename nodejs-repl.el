@@ -22,9 +22,10 @@
 ;;
 ;; This program is derived from comint-mode and provides the following features.
 ;;
-;;  * TAB completion same as Node.js REPL
+;;  * token completion, same as Node.js REPL
 ;;  * file name completion in string
 ;;  * incremental history search
+;;  * sending JavaScript codes to REPL
 ;;
 ;;
 ;; Put this file in your Emacs lisp path (e.g. ~/.emacs.d/site-lisp)
@@ -40,6 +41,7 @@
 ;;     (add-hook 'js-mode-hook
 ;;               (lambda ()
 ;;                 (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-expression)
+;;                 (define-key js-mode-map (kbd "C-c C-j") 'nodejs-repl-send-line)
 ;;                 (define-key js-mode-map (kbd "C-c C-r") 'nodejs-repl-send-region)
 ;;                 (define-key js-mode-map (kbd "C-c C-l") 'nodejs-repl-load-file)
 ;;                 (define-key js-mode-map (kbd "C-c C-z") 'nodejs-repl-switch-to-repl)))
