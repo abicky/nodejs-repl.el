@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2020  Takeshi Arabiki
 
 ;; Author: Takeshi Arabiki
-;; Version: 0.2.3
+;; Version: 0.2.4
 
 ;;  This program is free software: you can redistribute it and/or modify
 ;;  it under the terms of the GNU General Public License as published by
@@ -22,9 +22,10 @@
 ;;
 ;; This program is derived from comint-mode and provides the following features.
 ;;
-;;  * TAB completion same as Node.js REPL
+;;  * token completion, same as Node.js REPL
 ;;  * file name completion in string
 ;;  * incremental history search
+;;  * sending JavaScript codes to REPL
 ;;
 ;;
 ;; Put this file in your Emacs lisp path (e.g. ~/.emacs.d/site-lisp)
@@ -40,6 +41,7 @@
 ;;     (add-hook 'js-mode-hook
 ;;               (lambda ()
 ;;                 (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-expression)
+;;                 (define-key js-mode-map (kbd "C-c C-j") 'nodejs-repl-send-line)
 ;;                 (define-key js-mode-map (kbd "C-c C-r") 'nodejs-repl-send-region)
 ;;                 (define-key js-mode-map (kbd "C-c C-l") 'nodejs-repl-load-file)
 ;;                 (define-key js-mode-map (kbd "C-c C-z") 'nodejs-repl-switch-to-repl)))
@@ -73,7 +75,7 @@
   "Run Node.js REPL and communicate the process."
   :group 'processes)
 
-(defconst nodejs-repl-version "0.2.3"
+(defconst nodejs-repl-version "0.2.4"
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
@@ -223,7 +225,7 @@ See also `comint-process-echoes'"
              (not
               (let ((last-line (process-get proc 'last-line)))
                 (or (string-match-p nodejs-repl-prompt-re last-line)
-                    (string= last-line string)))))
+                    (string-prefix-p string last-line)))))
     (process-put proc 'running-p nil)
     (accept-process-output proc interval)))
 
@@ -308,7 +310,9 @@ when receive the output string"
 
 (defun nodejs-repl--delete-prompt (string)
   ;; Redundant prompts are included in outputs from Node.js REPL
-  (when nodejs-repl-prompt-deletion-required-p
+  (when (and nodejs-repl-prompt-deletion-required-p
+             ;; To avoid end-of-buffer error at the line of (forward-char (length nodejs-repl-prompt))
+             (> (buffer-size) 0))
     (setq nodejs-repl-prompt-deletion-required-p nil)
     (let ((beg (or comint-last-output-start
                    (point-min-marker)))
@@ -455,9 +459,7 @@ when receive the output string"
     ;; See: https://github.com/abicky/nodejs-repl.el/issues/17
     (comint-send-string proc ".editor\n")
     (comint-send-region proc start end)
-    (comint-send-string proc "\n")
-    (with-current-buffer (process-buffer proc)
-      (comint-send-eof))))
+    (comint-send-string proc "\n\x04")))
 
 ;;;###autoload
 (defun nodejs-repl-send-buffer ()

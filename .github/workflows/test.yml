@@ -8,13 +8,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         emacs-version:
-          - '24.5'
-          - '25.1'
-          - '25.2'
           - '25.3'
           - '26.1'
           - '26.2'
