@@ -455,9 +455,7 @@ when receive the output string"
     ;; See: https://github.com/abicky/nodejs-repl.el/issues/17
     (comint-send-string proc ".editor\n")
     (comint-send-region proc start end)
-    (comint-send-string proc "\n")
-    (with-current-buffer (process-buffer proc)
-      (comint-send-eof))))
+    (comint-send-string proc "\n\x04")))
 
 ;;;###autoload
 (defun nodejs-repl-send-buffer ()

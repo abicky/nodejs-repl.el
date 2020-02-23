@@ -1,12 +1,18 @@
+(require 'nodejs-repl)
 (require 'ert-expectations)
+
+(nodejs-repl)
 
 (expectations
   (desc "run Node.js REPL")
-  (expect nil
-    (require 'nodejs-repl)
+  (expect nodejs-repl-prompt
     ;; TODO: set adjust window width (candidates will change according to the width)
     ;;(adjust-window-trailing-edge (selected-window) (- 100 (window-width)) t)
-    (nodejs-repl))
+    (with-current-buffer (process-buffer (nodejs-repl--get-or-create-process))
+      (with-timeout (10 (error "timeout"))
+        (while (equal (buffer-string) "")
+            (sleep-for 0.1))
+        (buffer-string))))
 
   (desc "nodejs-repl--get-last-token")
   (expect "$._foo0"
@@ -34,6 +40,34 @@
       (list
        (ansi-color-filter-apply i-value)
        (ansi-color-filter-apply return-value))))
+
+  (desc "nodejs-repl-send-region")
+  (expect t
+    (let* ((proc (nodejs-repl--get-or-create-process))
+           (buf (process-buffer proc)))
+      ;; Emulate the case of https://github.com/abicky/nodejs-repl.el/issues/31
+      (comint-send-string proc "1\n")
+      (with-current-buffer buf
+        (with-timeout (10 (error "timeout"))
+          (while (not (string-suffix-p "> 1\n1\n> " (ansi-color-filter-apply (buffer-string))))
+            (sleep-for 0.1))))
+      (with-current-buffer (process-buffer (nodejs-repl--get-or-create-process))
+        (goto-char (point-min)))
+
+      (with-temp-buffer
+        (insert "2")
+        (nodejs-repl-send-region (point-min) (point-max)))
+      (with-current-buffer buf
+        (with-timeout (10 (error "timeout"))
+          (while (string-suffix-p "> 1\n1\n> " (ansi-color-filter-apply (buffer-string)))
+            (sleep-for 0.1)))
+        ;; > .editor
+        ;; // Entering editor mode (^D to finish, ^C to cancel)
+        ;; 2
+        ;;
+        ;; 2
+        ;; >
+        (string-suffix-p "2\n\n2\n> " (ansi-color-filter-apply (buffer-string))))))
 
   (desc "nodejs-repl-execute")
   (expect "2\n"
