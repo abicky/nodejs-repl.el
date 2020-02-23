@@ -223,7 +223,7 @@ See also `comint-process-echoes'"
              (not
               (let ((last-line (process-get proc 'last-line)))
                 (or (string-match-p nodejs-repl-prompt-re last-line)
-                    (string= last-line string)))))
+                    (string-prefix-p string last-line)))))
     (process-put proc 'running-p nil)
     (accept-process-output proc interval)))
 
