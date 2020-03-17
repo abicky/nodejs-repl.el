@@ -1,4 +1,4 @@
-;;; nodejs-repl.el --- Run Node.js REPL
+;;; nodejs-repl.el --- Run Node.js REPL  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2012-2020  Takeshi Arabiki
 
