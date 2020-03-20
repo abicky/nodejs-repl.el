@@ -1,4 +1,4 @@
-;;; nodejs-repl.el --- Run Node.js REPL
+;;; nodejs-repl.el --- Run Node.js REPL  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2012-2020  Takeshi Arabiki
 
@@ -279,7 +279,7 @@ when receive the output string"
       (setq proc (get-process nodejs-repl-process-name)))
     proc))
 
-(defun nodejs-repl--filter-escape-sequnces (string)
+(defun nodejs-repl--filter-escape-sequnces (_string)
   "Filter extra escape sequences from output."
   (let ((beg (or comint-last-output-start
                  (point-min-marker)))
@@ -290,7 +290,7 @@ when receive the output string"
       (while (re-search-forward nodejs-repl-extra-espace-sequence-re end t)
         (replace-match "")))))
 
-(defun nodejs-repl--clear-cache (string)
+(defun nodejs-repl--clear-cache (_string)
   "Clear caches when outputting the result."
   (setq nodejs-repl-cache-token "")
   (setq nodejs-repl-cache-completions ()))
@@ -298,7 +298,7 @@ when receive the output string"
 (defun nodejs-repl--set-prompt-deletion-required-p ()
   (setq nodejs-repl-prompt-deletion-required-p t))
 
-(defun nodejs-repl--remove-duplicated-prompt (string)
+(defun nodejs-repl--remove-duplicated-prompt (_string)
   ;; `.load` command of Node.js repl outputs a duplicated prompt
   (let ((beg (or comint-last-output-start
                  (point-min-marker)))
@@ -308,7 +308,7 @@ when receive the output string"
       (when (re-search-forward (concat nodejs-repl-prompt nodejs-repl-prompt) end t)
         (replace-match nodejs-repl-prompt)))))
 
-(defun nodejs-repl--delete-prompt (string)
+(defun nodejs-repl--delete-prompt (_string)
   ;; Redundant prompts are included in outputs from Node.js REPL
   (when (and nodejs-repl-prompt-deletion-required-p
              ;; To avoid end-of-buffer error at the line of (forward-char (length nodejs-repl-prompt))
@@ -489,7 +489,7 @@ otherwise spawn one."
   (pop-to-buffer
    (process-buffer (nodejs-repl--get-or-create-process))))
 
-(defun nodejs-repl-execute (command &optional buf)
+(defun nodejs-repl-execute (command &optional _buf)
   "Execute a command and output the result to the temporary buffer."
   (let ((ret (nodejs-repl--send-string (concat command "\n"))))
     (with-current-buffer (get-buffer-create nodejs-repl-temp-buffer-name)
