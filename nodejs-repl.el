@@ -198,7 +198,7 @@ See also `comint-process-echoes'"
 ;;; * the case that incomplete commands are sent like "1 +\n"
 ;;; * support commands which output a string without CR-LF like process.stdout.write("a")
 ;;;   while being processed
-(defun nodejs-repl--send-string (string)
+(defun nodejs-repl--send-string (string &optional timeout)
   "Send string to Node.js process and return the output."
   (with-temp-buffer
     (let* ((proc (get-process nodejs-repl-process-name))
@@ -212,7 +212,7 @@ See also `comint-process-echoes'"
             (set-process-filter proc 'nodejs-repl--insert-and-update-status)
             (set-marker (process-mark proc) (point-min))
             (process-send-string proc string)
-            (nodejs-repl--wait-for-process proc string))
+            (nodejs-repl--wait-for-process proc string (or timeout 0.01)))
         (set-process-buffer proc orig-buf)
         (set-process-filter proc orig-filter)
         (set-marker (process-mark proc) orig-marker orig-buf))
@@ -220,7 +220,7 @@ See also `comint-process-echoes'"
       (nodejs-repl--debug "buffer-string: " ret)
       ret)))
 
-(defun nodejs-repl--wait-for-process (proc string)
+(defun nodejs-repl--wait-for-process (proc string timeout)
   "Wait for Node.js process to output all results."
   (nodejs-repl--debug string)
   (process-put proc 'last-line "")
@@ -235,7 +235,7 @@ See also `comint-process-echoes'"
                     (string-prefix-p string last-line)))))
     (process-put proc 'running-p nil)
     (nodejs-repl--debug "accept-process-output")
-    (accept-process-output proc 0.01)))
+    (accept-process-output proc timeout)))
 
 (defun nodejs-repl--insert-and-update-status (proc string)
   "Insert the output string and update the process status (properties)
@@ -250,8 +250,10 @@ when receive the output string"
 (defun nodejs-repl--get-completions-from-process (token)
   "Get completions sending TAB to Node.js process."
   (let ((ret (progn
-               ;; Send TAB twice cf. https://github.com/nodejs/node/pull/7754
-               (nodejs-repl--send-string (concat token "\t"))
+               ;; Send TAB twice cf. https://github.com/nodejs/node/pull/7754,
+               ;; and wait longer on sending the first TAB because it seems to take
+               ;; more to get the full output
+               (nodejs-repl--send-string (concat token "\t") 0.1)
                (nodejs-repl--send-string "\t")))
         completions)
     (nodejs-repl-clear-line)
