@@ -231,6 +231,7 @@ See also `comint-process-echoes'"
                 (or (string-match-p nodejs-repl-prompt-re last-line)
                     (string-prefix-p string last-line)))))
     (process-put proc 'running-p nil)
+    (sleep-for 0.0001)
     (accept-process-output proc interval)))
 
 (defun nodejs-repl--insert-and-update-status (proc string)
@@ -246,7 +247,7 @@ when receive the output string"
   "Get completions sending TAB to Node.js process."
   (let ((ret (progn
                ;; Send TAB twice cf. https://github.com/nodejs/node/pull/7754
-               (nodejs-repl--send-string (concat token "\t") 0.1)
+               (nodejs-repl--send-string (concat token "\t") 1)
                (nodejs-repl--send-string "\t")))
         completions)
     (nodejs-repl-clear-line)
