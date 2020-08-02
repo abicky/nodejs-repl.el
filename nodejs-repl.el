@@ -213,6 +213,9 @@ See also `comint-process-echoes'"
         (set-process-buffer proc orig-buf)
         (set-process-filter proc orig-filter)
         (set-marker (process-mark proc) orig-marker orig-buf))
+      (message "input: %s" string)
+      (message (buffer-string))
+      (message "%s" (concatenate 'list (encode-coding-string (buffer-string) 'binary)))
       (buffer-string))))
 
 (defun nodejs-repl--wait-for-process (proc string interval)
