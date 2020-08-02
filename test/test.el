@@ -83,135 +83,135 @@
   (desc "nodejs-repl--get-completions")
   (expect '("Error")
     (delete-dups (nodejs-repl--get-completions "Err")))
-  (expect '("Error")
-    (delete-dups (nodejs-repl--get-completions "Erro")))
-  (expect "Err"  ; use cache?
-    nodejs-repl-cache-token)
-  (expect '("Math.max" "Math.min")
-    (nodejs-repl--get-completions "Math.m"))
-  ;; FIXME: this test is meaningless if window width is not set
-  (expect '("encodeURI" "encodeURIComponent")
-    (delete-dups (nodejs-repl--get-completions "encode")))
+  ;; (expect '("Error")
+  ;;   (delete-dups (nodejs-repl--get-completions "Erro")))
+  ;; (expect "Err"  ; use cache?
+  ;;   nodejs-repl-cache-token)
+  ;; (expect '("Math.max" "Math.min")
+  ;;   (nodejs-repl--get-completions "Math.m"))
+  ;; ;; FIXME: this test is meaningless if window width is not set
+  ;; (expect '("encodeURI" "encodeURIComponent")
+  ;;   (delete-dups (nodejs-repl--get-completions "encode")))
 
-  (desc "nodejs-repl--get-completions for require")
-  (expect nil
-    (nodejs-repl--get-completions "foo"))
-  (expect '("require")
-    (nodejs-repl--get-completions "requi"))
-  (expect t
-    (> (length (let ((nodejs-repl-get-completions-for-require-p t))
-                 (nodejs-repl--get-completions ""))) 1))
-  (expect "require('"  ; update cache?
-    nodejs-repl-cache-token)
-  (expect "require('"  ; use cache?
-    (let ((nodejs-repl-get-completions-for-require-p t))
-      (nodejs-repl--get-completions "f"))
-    nodejs-repl-cache-token)
-  (expect "require('npm/"  ; update cache?
-    (let ((nodejs-repl-get-completions-for-require-p t))
-      (nodejs-repl--get-completions "npm/"))
-    nodejs-repl-cache-token)
+  ;; (desc "nodejs-repl--get-completions for require")
+  ;; (expect nil
+  ;;   (nodejs-repl--get-completions "foo"))
+  ;; (expect '("require")
+  ;;   (nodejs-repl--get-completions "requi"))
+  ;; (expect t
+  ;;   (> (length (let ((nodejs-repl-get-completions-for-require-p t))
+  ;;                (nodejs-repl--get-completions ""))) 1))
+  ;; (expect "require('"  ; update cache?
+  ;;   nodejs-repl-cache-token)
+  ;; (expect "require('"  ; use cache?
+  ;;   (let ((nodejs-repl-get-completions-for-require-p t))
+  ;;     (nodejs-repl--get-completions "f"))
+  ;;   nodejs-repl-cache-token)
+  ;; (expect "require('npm/"  ; update cache?
+  ;;   (let ((nodejs-repl-get-completions-for-require-p t))
+  ;;     (nodejs-repl--get-completions "npm/"))
+  ;;   nodejs-repl-cache-token)
 
-  (desc "nodejs-repl--extract-require-argument")
-  (expect '("\"a" "\"a" "\"a" nil nil nil)
-    (list
-     (nodejs-repl--extract-require-argument "require(\"a")
-     (nodejs-repl--extract-require-argument " require(\"a")
-     (nodejs-repl--extract-require-argument ";require(\"a")
-     (nodejs-repl--extract-require-argument "$require(\"a")
-     (nodejs-repl--extract-require-argument ".require(\"a")
-     (nodejs-repl--extract-require-argument "require(\"a\"")))
+  ;; (desc "nodejs-repl--extract-require-argument")
+  ;; (expect '("\"a" "\"a" "\"a" nil nil nil)
+  ;;   (list
+  ;;    (nodejs-repl--extract-require-argument "require(\"a")
+  ;;    (nodejs-repl--extract-require-argument " require(\"a")
+  ;;    (nodejs-repl--extract-require-argument ";require(\"a")
+  ;;    (nodejs-repl--extract-require-argument "$require(\"a")
+  ;;    (nodejs-repl--extract-require-argument ".require(\"a")
+  ;;    (nodejs-repl--extract-require-argument "require(\"a\"")))
 
-  ;; TODO: send stirng and check the result (but process won't respond)
-  (desc "nodejs-repl-prompt")
-  (expect nil
-    (setq nodejs-repl-prompt "node> ")
-    (kill-process nodejs-repl-process-name)
-    (nodejs-repl))
+  ;; ;; TODO: send stirng and check the result (but process won't respond)
+  ;; (desc "nodejs-repl-prompt")
+  ;; (expect nil
+  ;;   (setq nodejs-repl-prompt "node> ")
+  ;;   (kill-process nodejs-repl-process-name)
+  ;;   (nodejs-repl))
 
-  (desc "nodejs-repl--beginning-of-expression")
-  (expect 6
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; foo\n(bar)")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 11
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; foo;\n(bar)")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 7
-    (with-temp-buffer
-      (js-mode)
-      (insert "return(foo)")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 6
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; function foo(a) { }")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 6
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; (function foo(a) { })(1)")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 6
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; !function foo(a) { }(1)")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 6
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; void function foo(a) { }(1)")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 18
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; const foo = (x) => { return () => x }")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 18
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; const foo = x  => { return x }")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 18
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; const foo = x=>{ return x }")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 25
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; const foo = (x) => x ")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 6
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; [1,2,3].map(function(number) { return number * 2 })")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 6
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; [1,2,3] . map(function(number) { return number * 2 })")
-      (nodejs-repl--beginning-of-expression)
-      ))
-  (expect 16
-    (with-temp-buffer
-      (js-mode)
-      (insert "bob; var foo = 1;")
-      (nodejs-repl--beginning-of-expression)
-      ))
+  ;; (desc "nodejs-repl--beginning-of-expression")
+  ;; (expect 6
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; foo\n(bar)")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 11
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; foo;\n(bar)")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 7
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "return(foo)")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 6
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; function foo(a) { }")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 6
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; (function foo(a) { })(1)")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 6
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; !function foo(a) { }(1)")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 6
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; void function foo(a) { }(1)")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 18
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; const foo = (x) => { return () => x }")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 18
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; const foo = x  => { return x }")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 18
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; const foo = x=>{ return x }")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 25
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; const foo = (x) => x ")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 6
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; [1,2,3].map(function(number) { return number * 2 })")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 6
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; [1,2,3] . map(function(number) { return number * 2 })")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
+  ;; (expect 16
+  ;;   (with-temp-buffer
+  ;;     (js-mode)
+  ;;     (insert "bob; var foo = 1;")
+  ;;     (nodejs-repl--beginning-of-expression)
+  ;;     ))
   )

@@ -196,7 +196,7 @@ See also `comint-process-echoes'"
 ;;; * the case that incomplete commands are sent like "1 +\n"
 ;;; * support commands which output a string without CR-LF like process.stdout.write("a")
 ;;;   while being processed
-(defun nodejs-repl--send-string (string)
+(defun nodejs-repl--send-string (string &optional interval)
   "Send string to Node.js process and return the output."
   (with-temp-buffer
     (let* ((proc (get-process nodejs-repl-process-name))
@@ -209,11 +209,11 @@ See also `comint-process-echoes'"
             (set-process-filter proc 'nodejs-repl--insert-and-update-status)
             (set-marker (process-mark proc) (point-min))
             (process-send-string proc string)
-            (nodejs-repl--wait-for-process proc string 0.01))
+            (nodejs-repl--wait-for-process proc string (or interval 0.01)))
         (set-process-buffer proc orig-buf)
         (set-process-filter proc orig-filter)
         (set-marker (process-mark proc) orig-marker orig-buf))
-      (message "input: %s" string)
+      (message "input: %s, interval: %s" string interval)
       (message (buffer-string))
       (message "%s" (concatenate 'list (encode-coding-string (buffer-string) 'binary)))
       (buffer-string))))
@@ -246,7 +246,7 @@ when receive the output string"
   "Get completions sending TAB to Node.js process."
   (let ((ret (progn
                ;; Send TAB twice cf. https://github.com/nodejs/node/pull/7754
-               (nodejs-repl--send-string (concat token "\t"))
+               (nodejs-repl--send-string (concat token "\t") 0.1)
                (nodejs-repl--send-string "\t")))
         completions)
     (nodejs-repl-clear-line)
