@@ -175,6 +175,8 @@ See also `comint-process-echoes'"
 (defvar nodejs-repl-get-completions-for-require-p nil)
 (defvar nodejs-repl-prompt-deletion-required-p nil)
 
+(defvar nodejs-repl--debug-mode-p (getenv "NODEJS_REPL_DEBUG"))
+
 ;;;--------------------------
 ;;; Private functions
 ;;;--------------------------
@@ -202,21 +204,25 @@ See also `comint-process-echoes'"
     (let* ((proc (get-process nodejs-repl-process-name))
            (orig-marker (marker-position (process-mark proc)))
            (orig-filter (process-filter proc))
-           (orig-buf (process-buffer proc)))
+           (orig-buf (process-buffer proc))
+           ret)
       (unwind-protect
           (progn
             (set-process-buffer proc (current-buffer))
             (set-process-filter proc 'nodejs-repl--insert-and-update-status)
             (set-marker (process-mark proc) (point-min))
             (process-send-string proc string)
-            (nodejs-repl--wait-for-process proc string 0.01))
+            (nodejs-repl--wait-for-process proc string))
         (set-process-buffer proc orig-buf)
         (set-process-filter proc orig-filter)
         (set-marker (process-mark proc) orig-marker orig-buf))
-      (buffer-string))))
+      (setq ret (buffer-string))
+      (nodejs-repl--debug "buffer-string: " ret)
+      ret)))
 
-(defun nodejs-repl--wait-for-process (proc string interval)
+(defun nodejs-repl--wait-for-process (proc string)
   "Wait for Node.js process to output all results."
+  (nodejs-repl--debug string)
   (process-put proc 'last-line "")
   (process-put proc 'running-p t)
   ;; trim trailing whitespaces
@@ -228,12 +234,14 @@ See also `comint-process-echoes'"
                 (or (string-match-p nodejs-repl-prompt-re last-line)
                     (string-prefix-p string last-line)))))
     (process-put proc 'running-p nil)
-    (accept-process-output proc interval)))
+    (nodejs-repl--debug "accept-process-output")
+    (accept-process-output proc 0.01)))
 
 (defun nodejs-repl--insert-and-update-status (proc string)
   "Insert the output string and update the process status (properties)
 when receive the output string"
   (process-put proc 'running-p t)
+  (nodejs-repl--debug string)
   (with-current-buffer (process-buffer proc)
     (insert string)
     (goto-char (point-max))
@@ -425,6 +433,21 @@ when receive the output string"
             nodejs-repl-cache-completions completions))
     completions))
 
+(defun nodejs-repl--debug (&rest strings)
+  (when nodejs-repl--debug-mode-p
+    (princ
+     (format
+      "%s: [DEBUG] %s: %s\n"
+      (format-time-string "%F %T.%3N" (current-time))
+      (nth 1 (backtrace-frame 2))
+      (replace-regexp-in-string
+       "\n" "\\\\n"
+       (replace-regexp-in-string
+        "\r" "\\\\r"
+        (replace-regexp-in-string
+         "\t" "\\\\t"
+         (replace-regexp-in-string "\e" "\\\\e" (apply 'concat strings))))))
+     #'external-debugging-output)))
 
 ;;;--------------------------
 ;;; Public functions

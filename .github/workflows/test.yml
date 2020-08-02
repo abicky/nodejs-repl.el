@@ -42,4 +42,4 @@ jobs:
       - name: Run tests
         run: |
           node -v
-          make test
+          NODEJS_REPL_DEBUG=1 make test

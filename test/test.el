@@ -50,6 +50,7 @@
       (with-current-buffer buf
         (with-timeout (10 (error "timeout"))
           (while (not (string-suffix-p "> 1\n1\n> " (ansi-color-filter-apply (buffer-string))))
+            (nodejs-repl--debug "buffer-string: " (ansi-color-filter-apply (buffer-string)))
             (sleep-for 0.1))))
       (with-current-buffer (process-buffer (nodejs-repl--get-or-create-process))
         (goto-char (point-min)))
@@ -60,6 +61,7 @@
       (with-current-buffer buf
         (with-timeout (10 (error "timeout"))
           (while (string-suffix-p "> 1\n1\n> " (ansi-color-filter-apply (buffer-string)))
+            (nodejs-repl--debug "buffer-string: " (ansi-color-filter-apply (buffer-string)))
             (sleep-for 0.1)))
         ;; > .editor
         ;; // Entering editor mode (^D to finish, ^C to cancel)
