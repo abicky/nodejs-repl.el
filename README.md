@@ -31,14 +31,7 @@ See also `comint-mode` to check key bindings.
 You can define key bindings to send JavaScript codes to REPL like below:
 
 ```elisp
-(add-hook 'js-mode-hook
-          (lambda ()
-            (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-expression)
-            (define-key js-mode-map (kbd "C-c C-j") 'nodejs-repl-send-line)
-            (define-key js-mode-map (kbd "C-c C-r") 'nodejs-repl-send-region)
-            (define-key js-mode-map (kbd "C-c C-c") 'nodejs-repl-send-buffer)
-            (define-key js-mode-map (kbd "C-c C-l") 'nodejs-repl-load-file)
-            (define-key js-mode-map (kbd "C-c C-z") 'nodejs-repl-switch-to-repl)))
+(add-hook 'js-mode-hook #'nodejs-repl-minor-mode)
 ```
 
 When a version manager such as nvm is used to run different versions

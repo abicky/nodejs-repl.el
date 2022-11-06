@@ -36,16 +36,10 @@
 ;; Type M-x nodejs-repl to run Node.js REPL.
 ;; See also `comint-mode' to check key bindings.
 ;;
-;; You can define key bindings to send JavaScript codes to REPL like below:
+;; You can use `nodejs-repl-minor-mode' to send JavaScript codes to REPL like
+;; below:
 ;;
-;;     (add-hook 'js-mode-hook
-;;               (lambda ()
-;;                 (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-expression)
-;;                 (define-key js-mode-map (kbd "C-c C-j") 'nodejs-repl-send-line)
-;;                 (define-key js-mode-map (kbd "C-c C-r") 'nodejs-repl-send-region)
-;;                 (define-key js-mode-map (kbd "C-c C-c") 'nodejs-repl-send-buffer)
-;;                 (define-key js-mode-map (kbd "C-c C-l") 'nodejs-repl-load-file)
-;;                 (define-key js-mode-map (kbd "C-c C-z") 'nodejs-repl-switch-to-repl)))
+;;     (add-hook 'js-mode-hook #'nodejs-repl-minor-mode)
 ;;
 ;; When a version manager such as nvm is used to run different versions
 ;; of Node.js, it is often desirable to start the REPL of the version
@@ -115,6 +109,11 @@ See also `comint-input-ignoredups'"
 See also `comint-process-echoes'"
   :group 'nodejs-repl
   :type 'boolean)
+
+(defcustom nodejs-repl-minor-mode-lighter " Node.js-REPL"
+  "Text displayed in the mode-line if `nodejs-repl-minor-mode' is active."
+  :group 'nodejs-repl
+  :type 'string)
 
 (defvar nodejs-repl-nodejs-version)
 (defvar nodejs-repl--nodejs-version-re
@@ -542,6 +541,42 @@ otherwise spawn one."
        (apply 'make-comint nodejs-repl-process-name "env" nil
               `("TERM=xterm" ,node-command ,@nodejs-repl-arguments "-e" ,nodejs-repl-code)))
       (nodejs-repl-mode))))
+
+(defvar nodejs-repl-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-p" #'nodejs-repl)
+    (define-key map "\C-c\C-z" #'nodejs-repl-switch-to-repl)
+    (define-key map "\C-x\C-e" #'nodejs-repl-send-last-expression)
+    (define-key map "\C-c\C-j" #'nodejs-repl-send-line)
+    (define-key map "\C-c\C-r" #'nodejs-repl-send-region)
+    (define-key map "\C-c\C-c" #'nodejs-repl-send-buffer)
+    (define-key map "\C-c\C-l" #'nodejs-repl-load-file)
+    map)
+  "Keymap for `nodejs-repl-minor-mode'")
+
+(easy-menu-define nodejs-repl-menu nodejs-repl-minor-mode-map "Node.js REPL menu"
+  '("Node.js REPL"
+    ["Start Node.js REPL" nodejs-repl
+     :help "Run inferior Node.js process in a separate buffer"]
+    ["Switch to REPL" nodejs-repl-switch-to-repl
+     :help "Switch to running inferior Node.js process"]
+    ["Eval " nodejs-repl-send-last-expression
+     :help "Eval last expression in inferior Python session"]
+    ["Eval line" nodejs-repl-send-line
+     :help "Eval line in inferior Python session"]
+    ["Eval region" nodejs-repl-send-region
+     :help "Eval region in inferior Python session"]
+    ["Eval buffer" nodejs-repl-send-buffer
+     :help "Eval buffer in inferior Python session"]
+    ["Eval file" nodejs-repl-send-file
+     :help "Eval file in inferior Python session"]))
+
+;;;###autoload
+(define-minor-mode nodejs-repl-minor-mode
+  "A minor mode for Node.js REPL"
+  :group 'nodejs-repl
+  :lighter nodejs-repl-minor-mode-lighter
+  :keymap nodejs-repl-minor-mode-map)
 
 (provide 'nodejs-repl)
 ;;; nodejs-repl.el ends here
