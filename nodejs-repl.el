@@ -561,15 +561,15 @@ otherwise spawn one."
     ["Switch to REPL" nodejs-repl-switch-to-repl
      :help "Switch to running inferior Node.js process"]
     ["Eval " nodejs-repl-send-last-expression
-     :help "Eval last expression in inferior Python session"]
+     :help "Eval last expression in inferior Node.js session"]
     ["Eval line" nodejs-repl-send-line
-     :help "Eval line in inferior Python session"]
+     :help "Eval line in inferior Node.js session"]
     ["Eval region" nodejs-repl-send-region
-     :help "Eval region in inferior Python session"]
+     :help "Eval region in inferior Node.js session"]
     ["Eval buffer" nodejs-repl-send-buffer
-     :help "Eval buffer in inferior Python session"]
+     :help "Eval buffer in inferior Node.js session"]
     ["Eval file" nodejs-repl-send-file
-     :help "Eval file in inferior Python session"]))
+     :help "Eval file in inferior Node.js session"]))
 
 ;;;###autoload
 (define-minor-mode nodejs-repl-minor-mode
