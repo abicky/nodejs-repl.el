@@ -311,19 +311,24 @@ when receive the output string"
 
 (defun nodejs-repl--delete-prompt (_string)
   ;; Redundant prompts are included in outputs from Node.js REPL
-  (when (and nodejs-repl-prompt-deletion-required-p
-             ;; To avoid end-of-buffer error at the line of (forward-char (length nodejs-repl-prompt))
-             (> (buffer-size) 0))
-    (setq nodejs-repl-prompt-deletion-required-p nil)
-    (let ((beg (or comint-last-output-start
-                   (point-min-marker)))
-          (end (process-mark (get-buffer-process (current-buffer)))))
-      (save-excursion
-        (goto-char beg)
-        (forward-line 0) ; Use forward-line instead of beginning-of-line to ignore prompts
-        (forward-char (length nodejs-repl-prompt))
-        (while (re-search-forward nodejs-repl-prompt end t)
-          (replace-match ""))))))
+  (let ((process (get-buffer-process (current-buffer))))
+    (when (and process 
+               nodejs-repl-prompt-deletion-required-p
+               ;; To avoid end-of-buffer error at the line of (forward-char
+               ;; (length nodejs-repl-prompt))
+               (> (buffer-size) 0))
+      (setq nodejs-repl-prompt-deletion-required-p nil)
+      (let ((beg (or comint-last-output-start
+                     (point-min-marker)))
+            (end (process-mark process)))
+        (save-excursion
+          (goto-char beg)
+          (ignore-errors
+            ;; Use forward-line instead of beginning-of-line to ignore prompts
+            (forward-line 0)
+            (forward-char (length nodejs-repl-prompt))
+            (while (re-search-forward nodejs-repl-prompt end t)
+              (replace-match ""))))))))
 
 ;; cf. https://www.ecma-international.org/ecma-262/#sec-ecmascript-language-expressions
 (defun nodejs-repl--beginning-of-expression ()
