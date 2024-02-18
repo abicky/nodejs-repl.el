@@ -321,7 +321,7 @@ when receive the output string."
       (save-excursion
         (goto-char beg)
         (forward-line 0) ; Use forward-line instead of beginning-of-line to ignore prompts
-        (unless (equal (point) (marker-position beg))
+        (when (<= (point) (- end (length nodejs-repl-prompt)))
           (forward-char (length nodejs-repl-prompt))
           (while (re-search-forward nodejs-repl-prompt end t)
             (replace-match "")))))))
