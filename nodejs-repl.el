@@ -28,7 +28,7 @@
 ;;  * sending JavaScript codes to REPL
 ;;
 ;;
-;; Put this file in your Emacs lisp path (e.g. ~/.emacs.d/site-lisp)
+;; Put this file in your Emacs Lisp path (e.g. ~/.emacs.d/site-lisp)
 ;; and add the following line to your .emacs:
 ;;
 ;;    (require 'nodejs-repl)
@@ -61,6 +61,7 @@
 ;;       (let ((output (shell-command-to-string "source ~/.nvm/nvm.sh; nvm which")))
 ;;         (cadr (split-string output "[\n]+" t))))
 ;;
+;;; Code:
 
 (require 'cc-mode)
 (require 'comint)
@@ -74,9 +75,9 @@
   "Node.js mode Version.")
 
 (defcustom nodejs-repl-command "node"
-  "Node.js command used in `nodejs-repl-mode'.  If it is a symbol
-of a function, the function is called for the path of the Node.js
-command.  This allows to integrate with a Node.js version manager
+  "Node.js command used in `nodejs-repl-mode'.
+If it is a symbol of a function, the function is called for the path of the
+Node.js command. This allows to integrate with a Node.js version manager
 such as nvm."
   :group 'nodejs-repl
   :type 'string)
@@ -92,7 +93,7 @@ such as nvm."
   :type 'string)
 
 (defcustom nodejs-repl-use-global "true"
-  "useGlobal option of Node.js REPL method repl.start"
+  "`useGlobal' option of Node.js REPL method repl.start."
   :group 'nodejs-repl
   :type 'string)
 
@@ -123,7 +124,7 @@ See also `comint-process-echoes'"
   "Functions runafter `nodejs-repl' is started.")
 
 (defvar nodejs-repl-process-name "nodejs"
-  "process name of Node.js REPL.")
+  "Process name of Node.js REPL.")
 
 (defvar nodejs-repl-temp-buffer-name "*nodejs-repl-command-output*")
 
@@ -178,7 +179,7 @@ See also `comint-process-echoes'"
 ;;; Private functions
 ;;;--------------------------
 (defun nodejs-repl--in-string-p (&optional pos)
-  "Return non-nil if point is inside string"
+  "Return non-nil if POS (default point) is inside string."
   (nth 3 (syntax-ppss pos)))
 
 (defun nodejs-repl--extract-require-argument (string)
@@ -186,7 +187,7 @@ See also `comint-process-echoes'"
       (match-string 1 string)))
 
 (defun nodejs-repl--get-last-token (string)
-  "Return the last token in the string."
+  "Return the last token in the STRING."
   (if (string-match "\\([._$]\\|\\w\\)+$" string)
       (match-string 0 string)))
 
@@ -196,7 +197,7 @@ See also `comint-process-echoes'"
 ;;; * support commands which output a string without CR-LF like process.stdout.write("a")
 ;;;   while being processed
 (defun nodejs-repl--send-string (string)
-  "Send string to Node.js process and return the output."
+  "Send STRING to Node.js process and return the output."
   (with-temp-buffer
     (let* ((proc (get-process nodejs-repl-process-name))
            (orig-marker (marker-position (process-mark proc)))
@@ -215,7 +216,7 @@ See also `comint-process-echoes'"
       (buffer-string))))
 
 (defun nodejs-repl--wait-for-process (proc string interval)
-  "Wait for Node.js process to output all results."
+  "Wait for Node.js process PROC to output all results."
   (process-put proc 'last-line "")
   (process-put proc 'running-p t)
   ;; trim trailing whitespaces
@@ -230,16 +231,16 @@ See also `comint-process-echoes'"
     (accept-process-output proc interval)))
 
 (defun nodejs-repl--insert-and-update-status (proc string)
-  "Insert the output string and update the process status (properties)
-when receive the output string"
+  "Insert the output STRING and update the process PROC status (properties)
+when receive the output string."
   (process-put proc 'running-p t)
   (with-current-buffer (process-buffer proc)
     (insert string)
     (goto-char (point-max))
-    (process-put proc 'last-line (buffer-substring (point-at-bol) (point)))))
+    (process-put proc 'last-line (buffer-substring (line-beginning-position) (point)))))
 
 (defun nodejs-repl--get-completions-from-process (token)
-  "Get completions sending TAB to Node.js process."
+  "Get completions for prefix TOKEN by sending TAB to Node.js process."
   (let ((ret (progn
                ;; Send TAB twice cf. https://github.com/nodejs/node/pull/7754
                (nodejs-repl--send-string (concat token "\t"))
@@ -398,7 +399,7 @@ when receive the output string"
                      (not (string-match-p "[./]" (substring require-arg 1 2)))))  ; not file path
             (setq token-length (1- (length require-arg)))
           (let ((quote-pos (save-excursion
-                             (search-backward-regexp "['\"]" (point-at-bol) t)
+                             (search-backward-regexp "['\"]" (line-beginning-position) t)
                              (forward-char)
                              (point))))
             (when quote-pos
@@ -440,7 +441,7 @@ when receive the output string"
 
 ;;;###autoload
 (defun nodejs-repl-send-line ()
-  "Send the current line to the `nodejs-repl-process'"
+  "Send the current line to the `nodejs-repl-process'."
   (interactive)
   (save-excursion
     (let ((proc (nodejs-repl--get-or-create-process))
@@ -453,7 +454,7 @@ when receive the output string"
 
 ;;;###autoload
 (defun nodejs-repl-send-region (start end)
-  "Send the current region to the `nodejs-repl-process'"
+  "Send the current region from START to END to the `nodejs-repl-process'."
   (interactive "r")
   (let ((proc (nodejs-repl--get-or-create-process)))
     ;; Enclose the region in .editor ... EOF as this is more robust.
@@ -464,34 +465,33 @@ when receive the output string"
 
 ;;;###autoload
 (defun nodejs-repl-send-buffer ()
-  "Send the current buffer to the `nodejs-repl-process'"
+  "Send the current buffer to the `nodejs-repl-process'."
   (interactive)
   (nodejs-repl-send-region (point-min) (point-max)))
 
 ;;;###autoload
 (defun nodejs-repl-load-file (file)
-  "Load the file to the `nodejs-repl-process'"
+  "Load the FILE to the `nodejs-repl-process'."
   (interactive (list (expand-file-name (read-file-name "Load file: " nil nil 'lambda))))
   (let ((proc (nodejs-repl--get-or-create-process)))
     (comint-send-string proc (format ".load %s\n" file))))
 
 ;;;###autoload
 (defun nodejs-repl-send-last-expression ()
-  "Send the expression before point to the `nodejs-repl-process'"
+  "Send the expression before point to the `nodejs-repl-process'."
   (interactive)
   (nodejs-repl-send-region (save-excursion (nodejs-repl--beginning-of-expression))
                            (point)))
 
 ;;;###autoload
 (defun nodejs-repl-switch-to-repl ()
-  "If there is a `nodejs-repl-process' running switch to it,
-otherwise spawn one."
+  "Switch to a `nodejs-repl-process', spawning a new one if necessary."
   (interactive)
   (pop-to-buffer
    (process-buffer (nodejs-repl--get-or-create-process))))
 
 (defun nodejs-repl-execute (command &optional _buf)
-  "Execute a command and output the result to the temporary buffer."
+  "Execute a COMMAND and output the result to the temporary buffer."
   (let ((ret (nodejs-repl--send-string (concat command "\n"))))
     (with-current-buffer (get-buffer-create nodejs-repl-temp-buffer-name)
       (erase-buffer)
@@ -502,10 +502,10 @@ otherwise spawn one."
       (insert ret)
       ;; delete last line (prompt)
       (goto-char (point-max))
-      (delete-region (point-at-bol) (point)))))
+      (delete-region (line-beginning-position) (point)))))
 
 (define-derived-mode nodejs-repl-mode comint-mode "Node.js REPL"
-  "Major mode for Node.js REPL"
+  "Major mode for Node.js REPL."
   :syntax-table nodejs-repl-mode-syntax-table
   (set (make-local-variable 'font-lock-defaults) '(nil nil t))
   (add-hook 'comint-output-filter-functions 'nodejs-repl--delete-prompt nil t)
