@@ -13,26 +13,27 @@ jobs:
       fail-fast: false
       matrix:
         emacs-version:
-          - '25.3'
-          - '26.1'
-          - '26.2'
-          - '26.3'
+          - '27.1'
+          - '27.2'
+          - '28.1'
+          - '28.2'
+          - '29.1'
+          - '29.2'
         node-version:
-          - '10'
-          - '12'
-          - '13'
+          - '18'
+          - '20'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: purcell/setup-emacs@master
         with:
           version: ${{ matrix.emacs-version }}
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
       - name: Set environement variables
         run: |
-          echo "::add-path::$HOME/.cask/bin"
+          echo "$HOME/.cask/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: |

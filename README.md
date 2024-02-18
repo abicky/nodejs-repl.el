@@ -10,15 +10,15 @@ Description
 
 This program is derived from comint-mode and provides the following features.
 
-* token completion, same as Node.js REPL
-* file name completion in string
-* incremental history search
-* sending JavaScript codes to REPL
+* Token completion, same as Node.js REPL
+* File name completion in string
+* Incremental history search
+* Sending JavaScript code to REPL
 
 Usage
 -----
 
-Put this file in your Emacs lisp path (e.g. ~/.emacs.d/site-lisp)
+Put this file in your Emacs Lisp path (e.g. ~/.emacs.d/site-lisp)
 and add the following line to your .emacs:
 
 ```elisp
@@ -28,16 +28,10 @@ and add the following line to your .emacs:
 Type `M-x nodejs-repl` to run Node.js REPL.
 See also `comint-mode` to check key bindings.
 
-You can define key bindings to send JavaScript codes to REPL like below:
+You can define key bindings to send JavaScript code to REPL as follows:
 
 ```elisp
-(add-hook 'js-mode-hook
-          (lambda ()
-            (define-key js-mode-map (kbd "C-x C-e") 'nodejs-repl-send-last-expression)
-            (define-key js-mode-map (kbd "C-c C-j") 'nodejs-repl-send-line)
-            (define-key js-mode-map (kbd "C-c C-r") 'nodejs-repl-send-region)
-            (define-key js-mode-map (kbd "C-c C-l") 'nodejs-repl-load-file)
-            (define-key js-mode-map (kbd "C-c C-z") 'nodejs-repl-switch-to-repl)))
+(add-hook 'js-mode-hook #'nodejs-repl-minor-mode)
 ```
 
 When a version manager such as nvm is used to run different versions
@@ -73,7 +67,7 @@ Takeshi Arabiki (abicky)
 Copyright and License
 ---------------------
 
-Copyright (C) 2012-2020  Takeshi Arabiki (abicky)
+Copyright (C) 2012-2024  Takeshi Arabiki (abicky)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
