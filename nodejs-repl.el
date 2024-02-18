@@ -320,9 +320,10 @@ when receive the output string"
       (save-excursion
         (goto-char beg)
         (forward-line 0) ; Use forward-line instead of beginning-of-line to ignore prompts
-        (forward-char (length nodejs-repl-prompt))
-        (while (re-search-forward nodejs-repl-prompt end t)
-          (replace-match ""))))))
+        (unless (equal (point) (marker-position beg))
+          (forward-char (length nodejs-repl-prompt))
+          (while (re-search-forward nodejs-repl-prompt end t)
+            (replace-match "")))))))
 
 ;; cf. https://www.ecma-international.org/ecma-262/#sec-ecmascript-language-expressions
 (defun nodejs-repl--beginning-of-expression ()
